@@ -79,6 +79,28 @@ The tab contains:
 
 The extension automatically obtains the current work-item context. The user does not manually enter a work-item ID.
 
+## Implementation stack
+
+The agreed implementation stack is:
+
+```text
+Azure DevOps Extension
+React + TypeScript
+        │
+        │ HTTPS/JSON
+        ▼
+Time Logger API
+Node.js + TypeScript + Fastify
+        │
+        ▼
+Prisma
+        │
+        ▼
+PostgreSQL
+```
+
+The use of Node.js/TypeScript is an application architecture choice, not an Azure DevOps extension compatibility requirement. The extension communicates with the API over normal HTTPS.
+
 ## Example
 
 ```text

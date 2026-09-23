@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+*.vsix
+*.tsbuildinfo
+.env
+.env.*.local
+.DS_Store
+src/api/prisma/*.db

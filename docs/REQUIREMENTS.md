@@ -277,11 +277,12 @@ Do not log full access tokens or sensitive request headers.
 
 ### NFR-006 — Maintainability
 
-- TypeScript strict mode for extension code.
-- Nullable reference types enabled in .NET.
+- TypeScript strict mode for extension and API code.
+- Shared API contracts should be explicit and small.
 - Business rules covered by tests.
 - API contracts documented.
-- Migration scripts/source controlled.
+- Prisma schema and migration history source controlled.
+- Database types must not be exposed directly as public API contracts.
 
 ### NFR-007 — Accessibility
 

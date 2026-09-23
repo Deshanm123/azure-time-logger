@@ -1,0 +1,25 @@
+{
+  "name": "azure-time-logger",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": [
+    "packages/contracts",
+    "src/api",
+    "src/extension"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev -w @time-logger/api",
+    "dev:extension": "npm run dev -w @time-logger/extension",
+    "build": "npm run build -w @time-logger/contracts && npm run build -w @time-logger/api && npm run build -w @time-logger/extension",
+    "pretest": "npm run build -w @time-logger/contracts",
+    "test": "npm run test -w @time-logger/api && npm run test -w @time-logger/extension",
+    "typecheck": "npm run typecheck -w @time-logger/contracts && npm run typecheck -w @time-logger/api && npm run typecheck -w @time-logger/extension",
+    "format:check": "prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.2"
+  }
+}

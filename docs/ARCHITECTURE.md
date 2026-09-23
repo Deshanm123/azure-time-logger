@@ -12,7 +12,7 @@ The system is split into three logical areas:
 flowchart TB
     U[Azure DevOps User] --> WI[Azure DevOps Work Item]
     WI --> EXT[Time Logs Extension<br/>React + TypeScript]
-    EXT --> API[Time Logger API<br/>ASP.NET Core]
+    EXT --> API[Time Logger API<br/>Node.js + TypeScript]
     API --> DB[(PostgreSQL)]
 
     ADO[Azure DevOps Analytics / REST] -. future .-> ING[Ingestion]
@@ -63,11 +63,15 @@ The extension is **not** responsible for:
 
 Proposed MVP backend:
 
-- ASP.NET Core 8 Web API;
-- Entity Framework Core;
-- PostgreSQL provider;
+- Node.js;
+- TypeScript;
+- Fastify REST API;
+- Prisma ORM;
+- PostgreSQL;
 - OpenAPI in non-production or controlled environments;
 - structured logging.
+
+The extension and API are both TypeScript projects. Shared DTO/schema types may live in a small shared package, but domain logic must not be coupled to browser-specific Azure DevOps APIs.
 
 ### Responsibilities
 
@@ -83,11 +87,25 @@ The backend owns:
 - summary calculations;
 - analytics/export contracts added later.
 
+### Shared TypeScript contracts
+
+Where useful, transport contracts can be shared between the extension and API:
+
+```text
+packages/
+└── contracts/
+    ├── time-log.ts
+    ├── activity.ts
+    └── api-errors.ts
+```
+
+Only stable API-facing types belong in the shared package. Database models and Azure DevOps SDK objects should not be exported as shared contracts.
+
 ## Authentication and authorization
 
-The production authentication approach must use a supported Azure DevOps / Microsoft identity mechanism appropriate to the deployment environment.
+The MVP uses the supported Azure DevOps extension app-token flow. The extension obtains a signed JWT with `SDK.getAppToken()` and sends it as a bearer token. The API validates the token with the extension certificate key loaded from its deployment secret store, then derives the stable owner ID from the validated `user_id` claim. The browser never sends an authoritative `userId` in a time-log request.
 
-This is intentionally treated as an implementation decision requiring validation in the target organization.
+This flow must still be exercised after the extension is published in the target test organization because the certificate is generated during publishing. A separate header-based identity mode exists only for local development and tests; API startup rejects that mode in production.
 
 Rules:
 
@@ -96,6 +114,8 @@ Rules:
 - do not embed PATs, client secrets, or API keys in extension JavaScript;
 - map authenticated identity to a stable internal user identifier;
 - enforce edit/delete ownership on the server.
+
+The initial manifest requests no Azure DevOps REST scopes. The extension uses host-provided SDK context rather than calling additional Azure DevOps REST endpoints.
 
 ## Core domain model
 
@@ -337,7 +357,7 @@ MVP deployment can remain small:
 ```text
 Azure DevOps Extension Package
             +
-Small ASP.NET Core API
+Small Node.js + TypeScript API
             +
 PostgreSQL Database
 ```

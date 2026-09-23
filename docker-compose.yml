@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: time_logger
+      POSTGRES_USER: time_logger
+      POSTGRES_PASSWORD: time_logger_dev
+    ports:
+      - '5433:5432'
+    volumes:
+      - time-logger-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U time_logger -d time_logger']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  time-logger-postgres:

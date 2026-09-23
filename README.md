@@ -4,7 +4,7 @@ A lightweight Azure DevOps extension for logging time against work items at a da
 
 The product is intended to give teams a Jira/Ruddr-style work-log experience inside Azure DevOps while keeping Azure DevOps work items as the source of delivery context and the Time Logger service as the source of detailed time-entry history.
 
-> Status: Draft product and engineering specification  
+> Status: MVP implemented; Azure DevOps test-organization deployment remains
 > Last updated: 2026-09-23
 
 ## Why this exists
@@ -15,11 +15,11 @@ This project adds that missing layer.
 
 Example:
 
-| Date | User | Hours | Activity | Note |
-|---|---|---:|---|---|
-| 2026-09-21 | Developer A | 2.0 | Development | Implemented booking API validation |
-| 2026-09-22 | Developer A | 1.5 | Code Review | Reviewed booking API PR |
-| 2026-09-23 | QA A | 2.0 | Testing | Regression tested duplicate booking fix |
+| Date       | User        | Hours | Activity    | Note                                    |
+| ---------- | ----------- | ----: | ----------- | --------------------------------------- |
+| 2026-09-21 | Developer A |   2.0 | Development | Implemented booking API validation      |
+| 2026-09-22 | Developer A |   1.5 | Code Review | Reviewed booking API PR                 |
+| 2026-09-23 | QA A        |   2.0 | Testing     | Regression tested duplicate booking fix |
 
 The work item can still show a summarized total, while the Time Logger retains the detailed history.
 
@@ -37,7 +37,7 @@ Users can:
 
 Future phases add weekly timesheets, reporting, optional synchronization to Azure DevOps aggregate fields, data-lake ingestion, Power BI reporting, Ruddr integration, and ML/AI-assisted delivery insights.
 
-## Proposed technology
+## Technology
 
 ### Extension
 
@@ -49,10 +49,14 @@ Future phases add weekly timesheets, reporting, optional synchronization to Azur
 
 ### Backend
 
-- ASP.NET Core 8 Web API
-- Entity Framework Core
+- Node.js
+- TypeScript
+- Fastify REST API
+- Prisma ORM
 - PostgreSQL
 - REST endpoints for time-log operations
+
+Using TypeScript on both the extension and API allows shared request/response contracts and validation types where appropriate.
 
 ### Analytics, later phase
 
@@ -63,27 +67,19 @@ Future phases add weekly timesheets, reporting, optional synchronization to Azur
 - Power BI
 - Optional ML/AI layer
 
-## Expected repository structure
+## Repository structure
 
 ```text
 /
 ├── README.md
-├── PRODUCT.md
-├── REQUIREMENTS.md
-├── ARCHITECTURE.md
-├── DECISIONS.md
-├── ROADMAP.md
-├── AGENTS.md
+├── docs/                 # Product, requirements, architecture, decisions, roadmap
+├── packages/contracts/   # Shared API-facing TypeScript contracts
 ├── src/
-│   ├── extension/
-│   └── api/
-├── tests/
-│   ├── extension/
-│   └── api/
-└── infra/
+│   ├── extension/        # React Azure DevOps work-item page
+│   └── api/              # Fastify API and Prisma migrations
+├── docker-compose.yml    # Local PostgreSQL
+└── .github/workflows/    # Build and test CI
 ```
-
-The actual repository structure may differ once implementation starts. `AGENTS.md` requires Codex to inspect the repository before creating or moving files.
 
 ## Core data model
 
@@ -136,30 +132,77 @@ The detailed entries in the Time Logger remain the audit/history source.
 
 ## Local development
 
-The exact commands depend on the scaffold selected during implementation. A likely flow is:
+Prerequisites: Node.js 20 or newer and Docker.
 
 ```bash
-# Extension
-cd src/extension
 npm install
-npm run dev
+npm run prisma:generate -w @time-logger/api
 
-# API
-cd ../api
-dotnet restore
-dotnet run
+docker compose up -d postgres
+cp src/api/.env.example src/api/.env
+npm run prisma:migrate -w @time-logger/api
+
+# Terminal 1: Fastify API on http://localhost:3000
+npm run dev:api
+
+# Terminal 2: extension UI with a clearly labelled mock context
+npm run dev:extension
 ```
 
-Do not add placeholder commands to CI until they actually work in the repository.
+The local extension defaults to work item `160637`. Override the mock context with query parameters such as:
+
+```text
+http://localhost:5173/?organizationId=local-org&projectId=local-project&workItemId=42&workItemType=Task
+```
+
+`development-headers` authentication is accepted only when `NODE_ENV` is `development` or `test`. Production startup rejects that mode.
+
+## Verify the repository
+
+```bash
+npm run typecheck
+npm test
+npm run build
+npm run package:extension -w @time-logger/extension
+```
+
+The VSIX is written under `src/extension/` and ignored by Git.
+
+## Azure DevOps pilot setup
+
+1. Deploy the API and PostgreSQL, set `DATABASE_URL`, and run `npm run prisma:migrate -w @time-logger/api`.
+2. Publish the extension once, obtain its certificate key from the Azure DevOps extension management portal, and store it in the API secret store as `EXTENSION_SECRET`.
+3. Set `AUTH_MODE=app-token`, `NODE_ENV=production`, and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
+4. Replace `replace-with-your-publisher-id` in `src/extension/vss-extension.json`.
+5. Build with the deployed API URL, for example `VITE_API_BASE_URL=https://time.example.com npm run package:extension -w @time-logger/extension`.
+6. Upload the VSIX privately and install it in the test organization.
+
+The manifest requests no Azure DevOps REST scopes. Work-item, project, organization, and user context come from the host SDK; API requests use `SDK.getAppToken()`. The API validates that signed token and derives ownership from its stable user claim. Never place the extension certificate key in the frontend or manifest.
+
+## API
+
+Authenticated endpoints are scoped by organization and project as well as work-item ID:
+
+```text
+POST   /api/time-logs
+GET    /api/time-logs?organizationId=...&projectId=...&workItemId=...
+GET    /api/time-logs/:id?organizationId=...&projectId=...
+PUT    /api/time-logs/:id
+DELETE /api/time-logs/:id?organizationId=...&projectId=...&version=...
+GET    /api/time-logs/summary?organizationId=...&projectId=...&workItemId=...
+GET    /health
+```
+
+OpenAPI UI is available at `/docs` outside production. Create accepts an `Idempotency-Key`; update/delete require the current version and return `409` for stale writes. Delete is a soft delete.
 
 ## Documentation map
 
-- [PRODUCT.md](./PRODUCT.md) — product purpose, users, value, scope.
-- [REQUIREMENTS.md](./REQUIREMENTS.md) — functional and non-functional requirements.
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system structure and data flows.
-- [DECISIONS.md](./DECISIONS.md) — important technical/product decisions.
-- [ROADMAP.md](./ROADMAP.md) — staged delivery plan.
-- [AGENTS.md](./AGENTS.md) — instructions for Codex and other coding agents.
+- [PRODUCT.md](./docs/PRODUCT.md) — product purpose, users, value, scope.
+- [REQUIREMENTS.md](./docs/REQUIREMENTS.md) — functional and non-functional requirements.
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md) — system structure and data flows.
+- [DECISIONS.md](./docs/DECISIONS.md) — important technical/product decisions.
+- [ROADMAP.md](./docs/ROADMAP.md) — staged delivery plan.
+- [AGENTS.md](./docs/AGENTS.md) — instructions for Codex and other coding agents.
 
 ## Definition of MVP success
 
@@ -167,4 +210,4 @@ The MVP is successful when a user can open a supported Azure DevOps work item, c
 
 ## Reference material
 
-Implementation should be checked against the current Microsoft Azure DevOps extension documentation before coding contribution points, manifest scopes, or authentication flows.
+The implementation follows Microsoft's current guidance for [work-item form page contributions](https://learn.microsoft.com/en-us/azure/devops/extend/develop/add-workitem-extension?view=azure-devops) and [authenticating requests to an extension-owned service](https://learn.microsoft.com/en-us/azure/devops/extend/develop/auth?view=azure-devops).

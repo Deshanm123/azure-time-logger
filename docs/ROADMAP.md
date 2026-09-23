@@ -2,6 +2,12 @@
 
 The roadmap is ordered to prove the smallest useful product first and delay expensive or high-complexity integrations until the core data is trustworthy.
 
+## Implementation status — 2026-09-23
+
+Phases 0–4 are implemented in the repository: buildable extension/API scaffolds, the Time Logs page, PostgreSQL persistence, CRUD, totals, validation, ownership, idempotency, soft delete, concurrency, accessible states, responsive layout, tests, and CI. The extension package builds successfully.
+
+Remaining pilot acceptance work depends on deployment-specific values: publish under the real Azure DevOps publisher, configure the generated extension certificate key and API URL, deploy the API/database, and exercise the VSIX in the Vita-Rapidus test organization. These external integrations are not claimed as tested by the repository build.
+
 ## Phase 0 — Repository and development foundation
 
 **Goal:** create a buildable, testable repository.
@@ -10,8 +16,9 @@ Deliverables:
 
 - repository structure agreed;
 - extension scaffold;
-- ASP.NET Core API scaffold;
-- PostgreSQL development setup;
+- Node.js + TypeScript API scaffold;
+- Fastify API setup;
+- Prisma + PostgreSQL development setup;
 - formatting/linting;
 - unit-test projects;
 - environment configuration pattern;

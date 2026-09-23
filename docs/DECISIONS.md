@@ -99,28 +99,29 @@ Use React and TypeScript with the modern Azure DevOps Extension SDK/API packages
 
 ---
 
-## ADR-005 — ASP.NET Core for the API
+## ADR-005 — Node.js + TypeScript for the API
 
 **Status:** Accepted
 
 ### Context
 
-The backend needs validation, authorization, REST endpoints, persistence, observability, and future Azure integration.
+The backend needs validation, authorization, REST endpoints, persistence, observability, and future Azure integration. The Azure DevOps extension is already implemented in TypeScript, so using TypeScript on the API reduces context switching and allows carefully scoped sharing of API contracts.
 
 ### Decision
 
-Use ASP.NET Core 8 Web API.
+Use a Node.js API written in TypeScript. Use Fastify as the initial HTTP framework.
 
 ### Consequences
 
-- Clear API/domain separation.
-- Strong testing/tooling.
-- Compatible with Azure hosting options.
+- TypeScript is used across both extension and API.
+- Request/response contracts can be shared where useful.
+- Frontend and backend remain separate runtime boundaries despite using the same language.
+- Azure DevOps SDK objects must not leak into backend domain contracts.
 - Authentication must still be validated against the actual target Azure DevOps organization/deployment model before production.
 
 ---
 
-## ADR-006 — PostgreSQL for product persistence
+## ADR-006 — PostgreSQL + Prisma for product persistence
 
 **Status:** Accepted for initial implementation
 
@@ -130,13 +131,14 @@ Time logs are relational, require filtering/aggregation, and benefit from transa
 
 ### Decision
 
-Use PostgreSQL through Entity Framework Core.
+Use PostgreSQL for persistence and Prisma as the initial TypeScript database access/migration layer.
 
 ### Consequences
 
 - Good fit for relational queries and analytics extraction.
+- Strong TypeScript integration for database access.
 - Works locally through containers and in managed cloud offerings.
-- Requires migrations and database operations.
+- Requires Prisma migrations and database operations.
 - This decision can be revisited before production if organizational standards mandate Azure SQL or another approved store.
 
 ---
@@ -258,3 +260,24 @@ Do not add LLM/ML dependencies to MVP. Future AI/ML output must be evidence-back
 
 - MVP remains deterministic and easier to validate.
 - The data model still preserves fields required for future analysis.
+
+---
+
+## ADR-013 — Authenticate API requests with Azure DevOps extension app tokens
+
+**Status:** Accepted for MVP pilot; target-organization validation required
+
+### Context
+
+The API must verify that requests came from the installed extension and must derive ownership from an authenticated identity. Secrets and PATs cannot be embedded in browser JavaScript. Microsoft documents `SDK.getAppToken()` for calls to an extension-owned service.
+
+### Decision
+
+The extension sends its signed app token as a bearer token. The API validates the JWT with the extension certificate key supplied through deployment secrets and uses the validated `user_id` claim as the owner identifier. A header-based identity provider is available only in development and test environments.
+
+### Consequences
+
+- User IDs and display names in normal request bodies are ignored.
+- The extension certificate key must be rotated in the API when scope changes rotate the extension certificate.
+- The published extension and token claims must be verified in the Vita-Rapidus test organization before production rollout.
+- The current manifest needs no Azure DevOps REST scopes.

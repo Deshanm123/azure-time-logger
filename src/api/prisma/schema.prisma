@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model TimeLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String    @db.VarChar(100)
+  projectId       String    @db.VarChar(100)
+  workItemId      Int
+  userId          String    @db.VarChar(200)
+  userDisplayName String    @db.VarChar(300)
+  workDate        DateTime  @db.Date
+  hours           Decimal   @db.Decimal(5, 2)
+  activity        String    @db.VarChar(100)
+  note            String?   @db.VarChar(1000)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt       DateTime? @db.Timestamptz(3)
+  version         Int       @default(1)
+  idempotencyKey  String?   @db.VarChar(100)
+
+  @@index([organizationId, projectId, workItemId, workDate])
+  @@index([userId, workDate])
+  @@index([organizationId, projectId, workDate])
+  @@unique([userId, idempotencyKey])
+}
+

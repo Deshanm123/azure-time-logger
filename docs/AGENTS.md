@@ -72,7 +72,7 @@ For every non-trivial task, first inspect the relevant files.
 Examples:
 
 - extension change -> inspect manifest, package.json, src, SDK wrapper, existing components/tests;
-- API change -> inspect Program/startup, controllers/endpoints, services, domain models, EF configuration, migrations, tests;
+- API change -> inspect package.json, TypeScript config, Fastify bootstrap/routes, services, domain modules, Prisma schema/migrations, and tests;
 - schema change -> inspect current migrations and production compatibility;
 - CI change -> inspect all existing pipeline/workflow files.
 
@@ -104,6 +104,10 @@ Before changing extension manifest scopes or contribution types:
 
 ## 6. Backend rules
 
+The API is a Node.js + TypeScript service. Fastify is the initial HTTP framework and Prisma is the initial PostgreSQL access/migration layer.
+
+Use TypeScript strict mode. Keep route handlers thin and move business rules into testable services/domain modules.
+
 The API is the authority for business rules.
 
 Frontend validation improves UX but never replaces server validation.
@@ -134,7 +138,7 @@ Actual Hours
 
 Those may be synchronized in a later phase, but detailed time-log rows remain the source for daily history.
 
-Use migrations for schema changes.
+Use Prisma migrations for schema changes.
 
 Do not delete or rewrite migration history without an explicit reason and user approval.
 
