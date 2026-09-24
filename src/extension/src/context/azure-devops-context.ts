@@ -1,4 +1,7 @@
-import type { IWorkItemFormService } from 'azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices';
+import type {
+  IWorkItemFormService,
+  IWorkItemNotificationListener,
+} from 'azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices';
 import * as SDK from 'azure-devops-extension-sdk';
 import {
   createNestablePublicClientApplication,
@@ -27,16 +30,31 @@ export interface AuthHeadersProvider {
 
 const mockEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_CONTEXT === 'true';
 const entraClientId = import.meta.env.VITE_ENTRA_CLIENT_ID;
-const entraTenantId = import.meta.env.VITE_ENTRA_TENANT_ID;
+const entraAuthority =
+  import.meta.env.VITE_ENTRA_AUTHORITY ?? 'https://login.microsoftonline.com/common';
 const entraApiScope = import.meta.env.VITE_ENTRA_API_SCOPE;
 let initialized: Promise<void> | undefined;
 let entraClient: Promise<IPublicClientApplication> | undefined;
 let tokenRequest: Promise<string> | undefined;
 
-export async function loadWorkItemContext(): Promise<WorkItemContext> {
-  if (mockEnabled) return mockContext();
+const workItemPageProvider: IWorkItemNotificationListener = {
+  onLoaded: () => undefined,
+  onFieldChanged: () => undefined,
+  onSaved: () => undefined,
+  onRefreshed: () => undefined,
+  onReset: () => undefined,
+  onUnloaded: () => undefined,
+};
+
+export async function initializeAzureDevOpsContext(): Promise<void> {
+  if (mockEnabled) return;
   initialized ??= initializeSdk();
   await initialized;
+}
+
+export async function loadWorkItemContext(): Promise<WorkItemContext> {
+  if (mockEnabled) return mockContext();
+  await initializeAzureDevOpsContext();
 
   const service = await SDK.getService<IWorkItemFormService>(workItemFormServiceId);
   const fields = await service.getFieldValues(['System.Id', 'System.WorkItemType']);
@@ -64,8 +82,7 @@ export const authHeadersProvider: AuthHeadersProvider = {
     if (mockEnabled) {
       return { 'X-Dev-User-Id': 'local-user', 'X-Dev-User-Display-Name': 'Local Developer' };
     }
-    initialized ??= initializeSdk();
-    await initialized;
+    await initializeAzureDevOpsContext();
     tokenRequest ??= acquireApiToken();
     try {
       return { Authorization: `Bearer ${await tokenRequest}` };
@@ -76,10 +93,10 @@ export const authHeadersProvider: AuthHeadersProvider = {
 };
 
 async function acquireApiToken(): Promise<string> {
-  if (!entraClientId || !entraTenantId || !entraApiScope) {
+  if (!entraClientId || !entraApiScope) {
     throw new Error('Microsoft Entra authentication is not configured for this extension build.');
   }
-  entraClient ??= createEntraClient(entraClientId, entraTenantId);
+  entraClient ??= createEntraClient(entraClientId, entraAuthority);
   const client = await entraClient;
   const scopes = [entraApiScope];
   const account = client.getActiveAccount() ?? client.getAllAccounts()[0];
@@ -107,20 +124,22 @@ async function acquireApiToken(): Promise<string> {
 
 async function createEntraClient(
   clientId: string,
-  tenantId: string,
+  authority: string,
 ): Promise<IPublicClientApplication> {
   await SDK.enableNestedAppAuth();
   return createNestablePublicClientApplication({
     auth: {
       clientId,
-      authority: `https://login.microsoftonline.com/${tenantId}`,
+      authority,
     },
   });
 }
 
 async function initializeSdk(): Promise<void> {
-  await SDK.init({ applyTheme: true });
+  await SDK.init({ applyTheme: true, loaded: false });
   await SDK.ready();
+  SDK.register(SDK.getContributionId(), () => workItemPageProvider);
+  await SDK.notifyLoadSucceeded();
 }
 
 function mockContext(): WorkItemContext {

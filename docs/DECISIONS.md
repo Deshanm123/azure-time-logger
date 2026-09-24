@@ -321,7 +321,7 @@ preview deployment.
 
 ## ADR-015 — Authenticate users with Microsoft Entra through Azure DevOps NAA
 
-**Status:** Accepted
+**Status:** Superseded by ADR-016
 
 ### Context
 
@@ -344,7 +344,44 @@ stable owner identifier.
 
 - No client secret is embedded in the extension.
 - First use may require user or administrator consent according to tenant policy.
+- The pilot grants tenant-wide admin consent only for the SPA client's delegated
+  `access_as_user` permission to avoid an interactive consent round trip inside
+  the Azure DevOps iframe.
 - The deployment requires public tenant, client, audience, and scope settings.
 - The manifest still requires no Azure DevOps REST scopes.
 - Legacy app-token validation remains only as a migration option and must not be
   used to derive production identity from undocumented claims.
+
+---
+
+## ADR-016 — Support personal Microsoft accounts through an explicit tenant allowlist
+
+**Status:** Accepted
+
+### Context
+
+The Vita-Rapidus Azure DevOps organization identifies the pilot user as a
+personal Microsoft account (`msa`). Repeated NAA `GetToken` requests timed out
+after the client and API were configured as single-tenant registrations, even
+after tenant-wide consent was granted. The extension must support the identity
+type actually used by the target organization without accepting tokens from
+arbitrary tenants at the API.
+
+### Decision
+
+Configure both Entra registrations for organizational directories and personal
+Microsoft accounts, and use the `common` authority in the extension. Keep API
+authorization closed to an explicit tenant allowlist containing the deployment's
+home tenant and Microsoft's consumer tenant. The API selects JWKS using only an
+allowlisted `tid`, then validates the exact tenant issuer, audience, authorized
+SPA client, and delegated scope. Ownership uses `tid:oid`, falling back to the
+documented pairwise `tid:sub` identifier only when `oid` is absent.
+
+### Consequences
+
+- Personal Microsoft accounts used by the target Azure DevOps organization can
+  request the Time Logger API scope through NAA.
+- Although the registrations can issue tokens for other organizational tenants,
+  the API rejects every tenant not present in `ENTRA_ALLOWED_TENANT_IDS`.
+- Each accepted tenant has its own issuer and JWKS validation path.
+- No client secret, PAT, or browser-supplied owner identifier is trusted.

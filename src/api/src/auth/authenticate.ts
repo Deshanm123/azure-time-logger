@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose';
 
 import type { AppConfig } from '../config.js';
 import { AppError } from '../domain/errors.js';
@@ -14,7 +14,7 @@ declare module 'fastify' {
 export function createAuthenticator(config: AppConfig) {
   const verifyEntraToken =
     config.authMode === 'entra'
-      ? createEntraTokenVerifier(config.entraTenantId as string, config.entraAudience as string)
+      ? createEntraTokenVerifier(config.entraAllowedTenantIds, config.entraAudience as string)
       : undefined;
 
   return async function authenticate(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
@@ -35,7 +35,7 @@ export function createAuthenticator(config: AppConfig) {
         const payload = await (verifyEntraToken as EntraTokenVerifier)(authorization.slice(7));
         request.currentUser = userFromEntraToken(
           payload,
-          config.entraTenantId as string,
+          config.entraAllowedTenantIds,
           config.entraClientId as string,
           config.entraRequiredScope,
         );
@@ -65,16 +65,23 @@ export function createAuthenticator(config: AppConfig) {
 
 type EntraTokenVerifier = (token: string) => Promise<JWTPayload>;
 
-function createEntraTokenVerifier(tenantId: string, audience: string): EntraTokenVerifier {
-  const issuer = `https://login.microsoftonline.com/${tenantId}/v2.0`;
-  const keys = createRemoteJWKSet(
-    new URL(`https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`),
-  );
+function createEntraTokenVerifier(allowedTenantIds: string[], audience: string): EntraTokenVerifier {
+  const allowedTenants = new Set(allowedTenantIds);
+  const keySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
   return async (token) => {
+    const tenantId = stringClaim(decodeJwt(token).tid);
+    if (!tenantId || !allowedTenants.has(tenantId)) throw unauthorized();
+    let keys = keySets.get(tenantId);
+    if (!keys) {
+      keys = createRemoteJWKSet(
+        new URL(`https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`),
+      );
+      keySets.set(tenantId, keys);
+    }
     const { payload } = await jwtVerify(token, keys, {
       algorithms: ['RS256'],
       audience,
-      issuer,
+      issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`,
     });
     return payload;
   };
@@ -82,26 +89,28 @@ function createEntraTokenVerifier(tenantId: string, audience: string): EntraToke
 
 export function userFromEntraToken(
   payload: JWTPayload,
-  tenantId: string,
+  allowedTenantIds: string[],
   clientId: string,
   requiredScope: string,
 ): CurrentUser {
   const tokenTenant = stringClaim(payload.tid);
   const authorizedClient = stringClaim(payload.azp) ?? stringClaim(payload.appid);
   const objectId = stringClaim(payload.oid);
+  const subject = objectId ?? stringClaim(payload.sub);
   const scopes = stringClaim(payload.scp)?.split(/\s+/) ?? [];
   if (
-    tokenTenant !== tenantId ||
+    !tokenTenant ||
+    !allowedTenantIds.includes(tokenTenant) ||
     authorizedClient !== clientId ||
-    !objectId ||
+    !subject ||
     !scopes.includes(requiredScope)
   ) {
     throw unauthorized();
   }
-  const id = `${tokenTenant}:${objectId}`;
+  const id = objectId ? `${tokenTenant}:${objectId}` : `${tokenTenant}:sub:${subject}`;
   return {
     id,
-    displayName: stringClaim(payload.name) ?? stringClaim(payload.preferred_username) ?? objectId,
+    displayName: stringClaim(payload.name) ?? stringClaim(payload.preferred_username) ?? subject,
   };
 }
 

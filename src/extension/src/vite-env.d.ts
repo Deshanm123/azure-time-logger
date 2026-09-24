@@ -3,8 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string;
   readonly VITE_ENTRA_API_SCOPE?: string;
+  readonly VITE_ENTRA_AUTHORITY?: string;
   readonly VITE_ENTRA_CLIENT_ID?: string;
-  readonly VITE_ENTRA_TENANT_ID?: string;
   readonly VITE_ENABLE_MOCK_CONTEXT?: string;
   readonly VITE_SUPPORTED_WORK_ITEM_TYPES?: string;
 }
