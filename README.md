@@ -181,7 +181,9 @@ repository with these settings:
 3. Keep the detected **Fastify** framework preset. Do not set an output directory.
 4. Keep the function in the configured Singapore region (`sin1`) and provision
    the database in the same region.
-5. Add these production environment variables:
+5. Set the production branch to `main`. The checked-in ignored-build command
+   cancels deployments from `dev` and every other non-`main` branch.
+6. Add these production environment variables:
 
    | Variable               | Value                                                                  |
    | ---------------------- | ---------------------------------------------------------------------- |

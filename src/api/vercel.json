@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "fastify",
+  "ignoreCommand": "test \"$VERCEL_GIT_COMMIT_REF\" != \"main\"",
   "regions": ["sin1"]
 }
