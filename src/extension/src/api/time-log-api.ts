@@ -24,7 +24,7 @@ export class TimeLogApi {
   constructor(
     private readonly baseUrl: string,
     private readonly auth: AuthHeadersProvider,
-    private readonly fetcher: typeof fetch = fetch,
+    private readonly fetcher: typeof fetch = globalThis.fetch.bind(globalThis),
   ) {}
 
   async list(scope: WorkItemScope): Promise<TimeLog[]> {

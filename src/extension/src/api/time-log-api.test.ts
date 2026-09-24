@@ -1,8 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TimeLogApi } from './time-log-api';
 
 describe('TimeLogApi', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('sends authentication and idempotency headers', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(
@@ -43,5 +47,27 @@ describe('TimeLogApi', () => {
         }),
       }),
     );
+  });
+
+  it('binds the default fetch implementation to the browser global', async () => {
+    const receiverSensitiveFetch = vi.fn(function (this: typeof globalThis) {
+      if (this !== globalThis) throw new TypeError('Illegal invocation');
+      return Promise.resolve(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+    vi.stubGlobal('fetch', receiverSensitiveFetch);
+
+    const api = new TimeLogApi('https://api.example.test', {
+      getHeaders: async () => ({ Authorization: 'Bearer token' }),
+    });
+
+    await expect(
+      api.list({ organizationId: 'org', projectId: 'project', workItemId: 42 }),
+    ).resolves.toEqual([]);
+    expect(receiverSensitiveFetch).toHaveBeenCalledOnce();
   });
 });
