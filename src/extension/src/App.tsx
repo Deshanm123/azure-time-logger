@@ -12,6 +12,7 @@ import {
 import type { FormValues } from './domain/validation';
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
+const backendAvailable = Boolean(apiBaseUrl);
 const supportedTypes = new Set(
   (import.meta.env.VITE_SUPPORTED_WORK_ITEM_TYPES ?? 'Task,Product Backlog Item,Bug')
     .split(',')
@@ -43,27 +44,43 @@ export default function App() {
 
   useEffect(() => {
     void (async () => {
+      let current: WorkItemContext;
       try {
-        if (!apiBaseUrl)
-          throw new Error('VITE_API_BASE_URL must be configured for the extension build.');
-        const current = await loadWorkItemContext();
+        current = await loadWorkItemContext();
         if (!supportedTypes.has(current.workItemType)) {
           throw new Error(
             `Time logging is not enabled for ${current.workItemType || 'this work-item type'}.`,
           );
         }
         setContext(current);
+        setLoading(false);
+      } catch (caught) {
+        setError(messageFor(caught));
+        setLoading(false);
+        return;
+      }
+
+      if (!backendAvailable) {
+        setError(
+          'The Time Logger backend is not configured. You can view the form, but saving and history are unavailable.',
+        );
+        return;
+      }
+
+      try {
         await refresh(current);
       } catch (caught) {
         setError(messageFor(caught));
-      } finally {
-        setLoading(false);
       }
     })();
   }, [refresh]);
 
   async function save(input: TimeLogInput) {
     if (!context) return;
+    if (!backendAvailable) {
+      setError('The Time Logger backend must be configured before entries can be saved.');
+      return;
+    }
     setSaving(true);
     setError(undefined);
     setNotice(undefined);
@@ -167,6 +184,7 @@ export default function App() {
         initial={editValues}
         editing={Boolean(editing)}
         busy={saving}
+        available={backendAvailable}
         onCancel={() => setEditing(undefined)}
         onSubmit={save}
       />
@@ -180,6 +198,7 @@ export default function App() {
           <button
             className="secondary-button"
             type="button"
+            disabled={!backendAvailable}
             onClick={() => void refresh(context).catch((caught) => setError(messageFor(caught)))}
           >
             Refresh

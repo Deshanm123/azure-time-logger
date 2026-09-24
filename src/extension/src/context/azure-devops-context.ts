@@ -1,8 +1,7 @@
-import {
-  type IWorkItemFormService,
-  WorkItemTrackingServiceIds,
-} from 'azure-devops-extension-api/WorkItemTracking';
+import type { IWorkItemFormService } from 'azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices';
 import * as SDK from 'azure-devops-extension-sdk';
+
+const workItemFormServiceId = 'ms.vss-work-web.work-item-form';
 
 export interface WorkItemContext {
   organizationId: string;
@@ -25,9 +24,7 @@ export async function loadWorkItemContext(): Promise<WorkItemContext> {
   initialized ??= initializeSdk();
   await initialized;
 
-  const service = await SDK.getService<IWorkItemFormService>(
-    WorkItemTrackingServiceIds.WorkItemFormService,
-  );
+  const service = await SDK.getService<IWorkItemFormService>(workItemFormServiceId);
   const fields = await service.getFieldValues(['System.Id', 'System.WorkItemType']);
   const workItemId = Number(fields['System.Id']);
   if (!Number.isInteger(workItemId) || workItemId <= 0) {

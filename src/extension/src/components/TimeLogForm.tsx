@@ -9,6 +9,7 @@ interface Props {
   initial?: FormValues;
   editing: boolean;
   busy: boolean;
+  available: boolean;
   onCancel(): void;
   onSubmit(input: TimeLogInput): Promise<void>;
 }
@@ -20,7 +21,15 @@ const emptyValues = (): FormValues => ({
   note: '',
 });
 
-export function TimeLogForm({ context, initial, editing, busy, onCancel, onSubmit }: Props) {
+export function TimeLogForm({
+  context,
+  initial,
+  editing,
+  busy,
+  available,
+  onCancel,
+  onSubmit,
+}: Props) {
   const [values, setValues] = useState<FormValues>(initial ?? emptyValues());
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -99,8 +108,14 @@ export function TimeLogForm({ context, initial, editing, busy, onCancel, onSubmi
         </Field>
       </div>
       <div className="form-actions">
-        <button className="primary-button" type="submit" disabled={busy}>
-          {busy ? 'Saving…' : editing ? 'Save changes' : 'Log time'}
+        <button className="primary-button" type="submit" disabled={busy || !available}>
+          {!available
+            ? 'Backend unavailable'
+            : busy
+              ? 'Saving…'
+              : editing
+                ? 'Save changes'
+                : 'Log time'}
         </button>
         {editing && (
           <button className="secondary-button" type="button" onClick={onCancel} disabled={busy}>
