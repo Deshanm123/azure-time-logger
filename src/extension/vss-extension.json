@@ -1,7 +1,7 @@
 {
   "manifestVersion": 1,
   "id": "azure-time-logger",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "name": "Azure DevOps Time Logger",
   "description": "Log granular time against Azure DevOps work items.",
   "publisher": "DeshanMaduranga",

@@ -2,9 +2,13 @@ import type { IWorkItemFormService } from 'azure-devops-extension-api/WorkItemTr
 import * as SDK from 'azure-devops-extension-sdk';
 import {
   createNestablePublicClientApplication,
-  InteractionRequiredAuthError,
   type IPublicClientApplication,
 } from '@azure/msal-browser';
+
+import {
+  isAuthenticationTimeout,
+  requiresInteractiveAuthentication,
+} from './msal-errors';
 
 const workItemFormServiceId = 'ms.vss-work-web.work-item-form';
 
@@ -84,10 +88,20 @@ async function acquireApiToken(): Promise<string> {
     if (result.account) client.setActiveAccount(result.account);
     return result.accessToken;
   } catch (error) {
-    if (!(error instanceof InteractionRequiredAuthError)) throw error;
-    const result = await client.acquireTokenPopup({ scopes });
-    if (result.account) client.setActiveAccount(result.account);
-    return result.accessToken;
+    if (!requiresInteractiveAuthentication(error)) throw error;
+    try {
+      const result = await client.acquireTokenPopup({ scopes });
+      if (result.account) client.setActiveAccount(result.account);
+      return result.accessToken;
+    } catch (interactiveError) {
+      if (isAuthenticationTimeout(interactiveError)) {
+        throw new Error(
+          'Microsoft sign-in timed out in Azure DevOps. Close and reopen the work item, then try again.',
+          { cause: interactiveError },
+        );
+      }
+      throw interactiveError;
+    }
   }
 }
 
