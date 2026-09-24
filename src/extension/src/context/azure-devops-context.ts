@@ -21,7 +21,6 @@ export interface AuthHeadersProvider {
 
 const mockEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_CONTEXT === 'true';
 let initialized: Promise<void> | undefined;
-let tokenRequest: Promise<string> | undefined;
 
 const workItemPageProvider: IWorkItemNotificationListener = {
   onLoaded: () => undefined,
@@ -69,12 +68,12 @@ export const authHeadersProvider: AuthHeadersProvider = {
       return { 'X-Dev-User-Id': 'local-user', 'X-Dev-User-Display-Name': 'Local Developer' };
     }
     await initializeAzureDevOpsContext();
-    tokenRequest ??= SDK.getAccessToken();
-    try {
-      return { Authorization: `Bearer ${await tokenRequest}` };
-    } finally {
-      tokenRequest = undefined;
-    }
+    const user = SDK.getUser();
+    if (!user.id) throw new Error('Azure DevOps user context is unavailable.');
+    return {
+      'X-Azure-DevOps-User-Id': user.id,
+      'X-Azure-DevOps-User-Display-Name': encodeURIComponent(user.displayName || user.id),
+    };
   },
 };
 

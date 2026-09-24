@@ -356,7 +356,7 @@ stable owner identifier.
 
 ## ADR-017 — Resolve user identity with the Azure DevOps SDK access token
 
-**Status:** Accepted
+**Status:** Accepted for secure rollout; deferred for the MVP pilot by ADR-018
 
 ### Context
 
@@ -382,3 +382,36 @@ as authoritative ownership data.
 - The extension requests `vso.profile`, so users must approve the updated scope
   when the new VSIX is installed.
 - Access tokens are never logged or stored in the database.
+
+---
+
+## ADR-018 — Allow SDK context identity for the restricted MVP pilot
+
+**Status:** Accepted for the restricted MVP pilot
+
+### Context
+
+The pilot needs to prove time-log fetching and persistence inside the private
+Vita-Rapidus test organization. Azure DevOps access-token acquisition and
+profile resolution are blocking that validation. `SDK.getUser()` provides the
+current host user's stable UUID, but a browser request can copy or replace it.
+
+### Decision
+
+Add an explicit `sdk-context` API mode. The extension sends the UUID and encoded
+display name returned by `SDK.getUser()` in dedicated headers and does not
+request an access token. The API validates the UUID shape and continues to apply
+its normal record ownership checks using that asserted UUID. The pilot manifest
+requests no Azure DevOps REST scopes.
+
+Keep the secure `azure-devops` token/profile mode in the codebase for later use.
+
+### Consequences
+
+- The private pilot can fetch and store time logs without token acquisition.
+- Ownership still behaves per asserted SDK UUID, but it is not a security
+  boundary because a caller can spoof the headers.
+- The `sdk-context` deployment must remain private and contain no sensitive or
+  regulated data.
+- A wider or production rollout must switch back to verified authentication and
+  restore the required manifest scope.

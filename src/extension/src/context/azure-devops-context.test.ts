@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('azure-devops-extension-sdk', () => ({
   getAccessToken: vi.fn(async () => 'azure-devops-access-token'),
   getContributionId: vi.fn(() => 'time-logs-work-item-page'),
+  getUser: vi.fn(() => ({
+    id: '8f1836ac-5b94-68c8-93fe-fff161218d6e',
+    displayName: 'Deshan Maduranga',
+  })),
   init: vi.fn(async () => undefined),
   notifyLoadSucceeded: vi.fn(async () => undefined),
   ready: vi.fn(async () => undefined),
@@ -49,10 +53,12 @@ describe('Azure DevOps contribution initialization', () => {
     );
   });
 
-  it('uses the Azure DevOps user access token for API authentication', async () => {
+  it('sends the SDK user context without requesting an access token', async () => {
     await expect(authHeadersProvider.getHeaders()).resolves.toEqual({
-      Authorization: 'Bearer azure-devops-access-token',
+      'X-Azure-DevOps-User-Id': '8f1836ac-5b94-68c8-93fe-fff161218d6e',
+      'X-Azure-DevOps-User-Display-Name': 'Deshan%20Maduranga',
     });
-    expect(SDK.getAccessToken).toHaveBeenCalledOnce();
+    expect(SDK.getUser).toHaveBeenCalledOnce();
+    expect(SDK.getAccessToken).not.toHaveBeenCalled();
   });
 });

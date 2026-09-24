@@ -80,3 +80,40 @@ describe('Azure DevOps SDK token authentication', () => {
     });
   });
 });
+
+describe('MVP SDK context identity', () => {
+  const config = loadConfig({
+    NODE_ENV: 'production',
+    DATABASE_URL: 'postgresql://example.test/time_logger',
+    AUTH_MODE: 'sdk-context',
+  });
+
+  it('uses the Azure DevOps SDK user headers without requiring a bearer token', async () => {
+    const authenticate = createAuthenticator(config);
+    const request = {
+      headers: {
+        'x-azure-devops-user-id': '8f1836ac-5b94-68c8-93fe-fff161218d6e',
+        'x-azure-devops-user-display-name': 'Deshan%20Maduranga',
+      },
+    } as FastifyRequest;
+
+    await authenticate(request, {} as FastifyReply);
+
+    expect(currentUser(request)).toEqual({
+      id: '8f1836ac-5b94-68c8-93fe-fff161218d6e',
+      displayName: 'Deshan Maduranga',
+    });
+  });
+
+  it.each([undefined, 'not-a-uuid'])('rejects an invalid SDK user ID: %s', async (id) => {
+    const authenticate = createAuthenticator(config);
+    const request = {
+      headers: id ? { 'x-azure-devops-user-id': id } : {},
+    } as FastifyRequest;
+
+    await expect(authenticate(request, {} as FastifyReply)).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'AUTHENTICATION_REQUIRED',
+    });
+  });
+});

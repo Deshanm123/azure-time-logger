@@ -22,7 +22,7 @@ The user shall not be required to type the work-item ID.
 
 ### FR-003 — Current user context
 
-The extension shall identify the signed-in user using supported Azure DevOps identity/context APIs and send a stable user identifier to the backend.
+The extension shall identify the signed-in user using supported Azure DevOps identity/context APIs and send a stable user identifier to the backend. The restricted MVP pilot may send `SDK.getUser().id` without a token under the documented `sdk-context` exception.
 
 Display names may be stored for convenience, but authorization shall not rely on display name.
 
@@ -199,7 +199,7 @@ Exact endpoint naming may change during implementation.
 }
 ```
 
-User identity must come from authenticated context, not from a user-controlled `userId` field in the body.
+User identity must not come from a `userId` field in the time-log body. The restricted MVP `sdk-context` mode accepts the SDK UUID in a dedicated header; this is not cryptographically authenticated and is unsuitable outside the private pilot.
 
 ## Data requirements
 
@@ -235,7 +235,7 @@ Source
 ### NFR-001 — Security
 
 - No secrets in frontend source or extension manifest.
-- Backend endpoints require authentication.
+- Backend endpoints require authentication for secure deployments. The restricted MVP pilot may use the explicitly documented `sdk-context` bypass.
 - Authorization is enforced server-side.
 - Input is validated server-side.
 - Logs must not expose access tokens or sensitive headers.

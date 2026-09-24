@@ -6,7 +6,7 @@ The roadmap is ordered to prove the smallest useful product first and delay expe
 
 Phases 0–4 are implemented in the repository: buildable extension/API scaffolds, the Time Logs page, PostgreSQL persistence, CRUD, totals, validation, ownership, idempotency, soft delete, concurrency, accessible states, responsive layout, tests, and CI. The extension package builds successfully.
 
-Remaining pilot acceptance work depends on deployment-specific values: publish under the real Azure DevOps publisher, configure the API URL, deploy the API/database, approve the extension's `vso.profile` scope, and exercise the VSIX in the Vita-Rapidus test organization. These external integrations are not claimed as tested by the repository build.
+Remaining pilot acceptance work depends on deployment-specific values: publish under the real Azure DevOps publisher, configure the API URL, deploy the API/database, and exercise the token-free `sdk-context` VSIX in the Vita-Rapidus test organization. The pilot identity bypass is not suitable for a wider rollout. These external integrations are not claimed as tested by the repository build.
 
 ## Phase 0 — Repository and development foundation
 

@@ -3,6 +3,16 @@ import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../src/config.js';
 
 describe('authentication configuration', () => {
+  it('allows the restricted MVP SDK context mode in production', () => {
+    const config = loadConfig({
+      NODE_ENV: 'production',
+      DATABASE_URL: 'postgresql://example.test/time_logger',
+      AUTH_MODE: 'sdk-context',
+    });
+
+    expect(config.authMode).toBe('sdk-context');
+  });
+
   it('allows Azure DevOps authentication in production without Entra configuration', () => {
     const config = loadConfig({
       NODE_ENV: 'production',

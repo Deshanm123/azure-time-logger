@@ -22,6 +22,21 @@ export function createAuthenticator(
       : undefined;
 
   return async function authenticate(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+    if (config.authMode === 'sdk-context') {
+      const id = headerValue(request.headers['x-azure-devops-user-id']);
+      if (!id || !azureDevOpsUserIdPattern.test(id)) {
+        throw unauthorized('A valid Azure DevOps user ID is required for MVP context mode.');
+      }
+      const encodedDisplayName = headerValue(
+        request.headers['x-azure-devops-user-display-name'],
+      );
+      request.currentUser = {
+        id,
+        displayName: decodeHeaderValue(encodedDisplayName) ?? id,
+      };
+      return;
+    }
+
     if (config.authMode === 'development-headers') {
       const id = headerValue(request.headers['x-dev-user-id']);
       if (!id) throw unauthorized('X-Dev-User-Id is required in development.');
@@ -125,6 +140,18 @@ function stringClaim(value: unknown): string | undefined {
 
 function headerValue(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
+}
+
+const azureDevOpsUserIdPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function decodeHeaderValue(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return undefined;
+  }
 }
 
 function unauthorized(message = 'A valid authenticated user is required.'): AppError {

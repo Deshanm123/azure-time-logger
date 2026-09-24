@@ -188,7 +188,7 @@ repository with these settings:
    | Variable               | Value                                                                  |
    | ---------------------- | ---------------------------------------------------------------------- |
    | `DATABASE_URL`         | A pooled PostgreSQL connection string suitable for serverless traffic  |
-   | `AUTH_MODE`            | `azure-devops`                                                         |
+   | `AUTH_MODE`            | `sdk-context` for the restricted MVP pilot                             |
    | `CORS_ALLOWED_ORIGINS` | The exact deployed extension origin; comma-separate additional origins |
    | `BUSINESS_TIME_ZONE`   | Business IANA time zone, for example `Asia/Colombo`                    |
    | `MAX_HOURS_PER_ENTRY`  | Optional; defaults to `24`                                             |
@@ -211,16 +211,18 @@ verify `https://<your-vercel-domain>/health` returns `{"status":"healthy"}`.
 ### Connect the extension
 
 1. Deploy the API and PostgreSQL and apply the migration above.
-2. Set `AUTH_MODE=azure-devops` and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
+2. Set `AUTH_MODE=sdk-context` and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
 3. Replace `replace-with-your-publisher-id` in `src/extension/vss-extension.json`.
 4. Build with `VITE_API_BASE_URL` set for the target environment.
 5. Upload the VSIX privately and install it in the test organization.
 
-The manifest requests only `vso.profile`. Work-item, project, organization, and display context come from the host SDK. The extension sends the Azure DevOps user access token returned by the SDK; the API calls the Azure DevOps `profiles/me` endpoint with that token and uses the returned profile UUID as the authoritative owner. Browser-supplied user IDs are never trusted.
+The restricted MVP package requests no Azure DevOps REST scopes and does not request an access token. Work-item, project, organization, and user context come from the host SDK. In `sdk-context` mode, the extension sends `SDK.getUser().id` to the API, which uses that UUID for ownership checks.
+
+`sdk-context` is an explicit pilot-only security compromise: request headers can be spoofed by a caller outside the extension. Limit the deployment to the test organization and do not use this mode for public or security-sensitive data. The retained `azure-devops` mode verifies the SDK access token through Azure DevOps `profiles/me` and is the required mode for a secure rollout.
 
 ## API
 
-Authenticated endpoints are scoped by organization and project as well as work-item ID:
+API endpoints are scoped by organization and project as well as work-item ID:
 
 ```text
 POST   /api/time-logs

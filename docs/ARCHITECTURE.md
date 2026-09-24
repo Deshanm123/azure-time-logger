@@ -103,19 +103,19 @@ Only stable API-facing types belong in the shared package. Database models and A
 
 ## Authentication and authorization
 
-The MVP authenticates through the Azure DevOps Extension SDK. The extension requests the minimal `vso.profile` scope and sends the current user's Azure DevOps access token to the API. The API presents that token to the Azure DevOps `profiles/me` endpoint and derives ownership from the returned profile UUID. `SDK.getUser()` remains useful for display context, but the browser never supplies an authoritative `userId`.
+The restricted MVP pilot uses `sdk-context` mode to unblock persistence testing without an access token. The extension reads the signed-in user's UUID and display name through `SDK.getUser()` and sends them in dedicated request headers. The API validates the UUID shape and uses it for its existing ownership rules, but it cannot cryptographically verify who supplied the header.
 
-This flow must be exercised in the target test organization because access-token issuance is host-managed. A separate header-based identity mode exists only for local development and tests; API startup rejects that mode in production. Legacy app-token and Entra validation remain available as transition modes but are not used for production.
+This exception is limited to the private test organization and non-sensitive pilot data. The secure `azure-devops` mode remains available: it sends the SDK access token to the API, which resolves the authenticated `profiles/me` profile. `development-headers` remains local-only, while legacy app-token and Entra validation remain transition modes.
 
 Rules:
 
 - do not invent a custom password system;
-- do not trust a `userId` supplied by the browser;
+- do not treat `sdk-context` as secure authentication or expose that deployment publicly;
 - do not embed PATs, client secrets, or API keys in extension JavaScript;
 - map authenticated identity to a stable internal user identifier;
 - enforce edit/delete ownership on the server.
 
-The manifest requests only `vso.profile`, which is required to resolve the authenticated user's own Azure DevOps profile.
+The MVP pilot manifest requests no Azure DevOps REST scopes. A secure rollout using `azure-devops` mode must restore `vso.profile` so the backend can resolve the authenticated user's profile.
 
 ## Core domain model
 

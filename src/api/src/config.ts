@@ -7,7 +7,7 @@ const schema = z
     HOST: z.string().default('0.0.0.0'),
     DATABASE_URL: z.string().min(1),
     AUTH_MODE: z
-      .enum(['azure-devops', 'entra', 'app-token', 'development-headers'])
+      .enum(['sdk-context', 'azure-devops', 'entra', 'app-token', 'development-headers'])
       .default('app-token'),
     EXTENSION_SECRET: z.string().optional(),
     ENTRA_TENANT_ID: z.string().uuid().optional(),

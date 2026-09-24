@@ -1,14 +1,14 @@
 {
   "manifestVersion": 1,
   "id": "azure-time-logger",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "name": "Azure DevOps Time Logger",
   "description": "Log granular time against Azure DevOps work items.",
   "publisher": "DeshanMaduranga",
   "public": false,
   "categories": ["Azure Boards"],
   "targets": [{ "id": "Microsoft.VisualStudio.Services" }],
-  "scopes": ["vso.profile"],
+  "scopes": [],
   "files": [{ "path": "dist", "addressable": true }],
   "contributions": [
     {
