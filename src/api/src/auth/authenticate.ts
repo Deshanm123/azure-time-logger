@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 import type { AppConfig } from '../config.js';
 import { AppError } from '../domain/errors.js';
@@ -12,6 +12,11 @@ declare module 'fastify' {
 }
 
 export function createAuthenticator(config: AppConfig) {
+  const verifyEntraToken =
+    config.authMode === 'entra'
+      ? createEntraTokenVerifier(config.entraTenantId as string, config.entraAudience as string)
+      : undefined;
+
   return async function authenticate(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
     if (config.authMode === 'development-headers') {
       const id = headerValue(request.headers['x-dev-user-id']);
@@ -26,6 +31,17 @@ export function createAuthenticator(config: AppConfig) {
     const authorization = request.headers.authorization;
     if (!authorization?.startsWith('Bearer ')) throw unauthorized();
     try {
+      if (config.authMode === 'entra') {
+        const payload = await (verifyEntraToken as EntraTokenVerifier)(authorization.slice(7));
+        request.currentUser = userFromEntraToken(
+          payload,
+          config.entraTenantId as string,
+          config.entraClientId as string,
+          config.entraRequiredScope,
+        );
+        return;
+      }
+
       const secret = new TextEncoder().encode(config.extensionSecret as string);
       const { payload } = await jwtVerify(authorization.slice(7), secret, {
         algorithms: ['HS256'],
@@ -44,6 +60,48 @@ export function createAuthenticator(config: AppConfig) {
       if (error instanceof AppError) throw error;
       throw unauthorized();
     }
+  };
+}
+
+type EntraTokenVerifier = (token: string) => Promise<JWTPayload>;
+
+function createEntraTokenVerifier(tenantId: string, audience: string): EntraTokenVerifier {
+  const issuer = `https://login.microsoftonline.com/${tenantId}/v2.0`;
+  const keys = createRemoteJWKSet(
+    new URL(`https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`),
+  );
+  return async (token) => {
+    const { payload } = await jwtVerify(token, keys, {
+      algorithms: ['RS256'],
+      audience,
+      issuer,
+    });
+    return payload;
+  };
+}
+
+export function userFromEntraToken(
+  payload: JWTPayload,
+  tenantId: string,
+  clientId: string,
+  requiredScope: string,
+): CurrentUser {
+  const tokenTenant = stringClaim(payload.tid);
+  const authorizedClient = stringClaim(payload.azp) ?? stringClaim(payload.appid);
+  const objectId = stringClaim(payload.oid);
+  const scopes = stringClaim(payload.scp)?.split(/\s+/) ?? [];
+  if (
+    tokenTenant !== tenantId ||
+    authorizedClient !== clientId ||
+    !objectId ||
+    !scopes.includes(requiredScope)
+  ) {
+    throw unauthorized();
+  }
+  const id = `${tokenTenant}:${objectId}`;
+  return {
+    id,
+    displayName: stringClaim(payload.name) ?? stringClaim(payload.preferred_username) ?? objectId,
   };
 }
 

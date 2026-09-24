@@ -188,8 +188,11 @@ repository with these settings:
    | Variable               | Value                                                                  |
    | ---------------------- | ---------------------------------------------------------------------- |
    | `DATABASE_URL`         | A pooled PostgreSQL connection string suitable for serverless traffic  |
-   | `AUTH_MODE`            | `app-token`                                                            |
-   | `EXTENSION_SECRET`     | The 32+ character extension certificate key from Azure DevOps          |
+   | `AUTH_MODE`            | `entra`                                                                |
+   | `ENTRA_TENANT_ID`      | Microsoft Entra tenant ID                                              |
+   | `ENTRA_CLIENT_ID`      | Authorized SPA client application ID                                   |
+   | `ENTRA_AUDIENCE`       | Separate protected API identifier, normally `api://<API_CLIENT_ID>`    |
+   | `ENTRA_REQUIRED_SCOPE` | Delegated API scope; defaults to `access_as_user`                      |
    | `CORS_ALLOWED_ORIGINS` | The exact deployed extension origin; comma-separate additional origins |
    | `BUSINESS_TIME_ZONE`   | Business IANA time zone, for example `Asia/Colombo`                    |
    | `MAX_HOURS_PER_ENTRY`  | Optional; defaults to `24`                                             |
@@ -212,13 +215,13 @@ verify `https://<your-vercel-domain>/health` returns `{"status":"healthy"}`.
 ### Connect the extension
 
 1. Deploy the API and PostgreSQL and apply the migration above.
-2. Publish the extension once, obtain its certificate key from the Azure DevOps extension management portal, and store it in the API secret store as `EXTENSION_SECRET`.
-3. Set `AUTH_MODE=app-token`, `NODE_ENV=production`, and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
+2. Register separate single-tenant Microsoft Entra SPA client and protected API applications. Expose `access_as_user` on the API, authorize the SPA client for it, and add `https://dev.azure.com/_public/_MsalPopup` as the SPA redirect URI.
+3. Set `AUTH_MODE=entra`, the `ENTRA_*` variables above, and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
 4. Replace `replace-with-your-publisher-id` in `src/extension/vss-extension.json`.
-5. Build with the deployed API URL, for example `VITE_API_BASE_URL=https://time.example.com npm run package:extension -w @time-logger/extension`.
+5. Build with `VITE_API_BASE_URL`, `VITE_ENTRA_CLIENT_ID`, `VITE_ENTRA_TENANT_ID`, and the full `VITE_ENTRA_API_SCOPE` set for the target environment.
 6. Upload the VSIX privately and install it in the test organization.
 
-The manifest requests no Azure DevOps REST scopes. Work-item, project, organization, and user context come from the host SDK; API requests use `SDK.getAppToken()`. The API validates that signed token and derives ownership from its stable user claim. Never place the extension certificate key in the frontend or manifest.
+The manifest requests no Azure DevOps REST scopes. Work-item, project, and organization context come from the host SDK. Azure DevOps Nested App Authentication obtains an Entra access token for the extension API. The API validates its signature, tenant, audience, authorized client, and delegated scope, then derives ownership from the stable Entra `oid`. Client and tenant IDs are public configuration; never place client secrets in the frontend or manifest.
 
 ## API
 

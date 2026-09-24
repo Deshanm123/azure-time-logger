@@ -1,5 +1,10 @@
 import type { IWorkItemFormService } from 'azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices';
 import * as SDK from 'azure-devops-extension-sdk';
+import {
+  createNestablePublicClientApplication,
+  InteractionRequiredAuthError,
+  type IPublicClientApplication,
+} from '@azure/msal-browser';
 
 const workItemFormServiceId = 'ms.vss-work-web.work-item-form';
 
@@ -17,7 +22,12 @@ export interface AuthHeadersProvider {
 }
 
 const mockEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_CONTEXT === 'true';
+const entraClientId = import.meta.env.VITE_ENTRA_CLIENT_ID;
+const entraTenantId = import.meta.env.VITE_ENTRA_TENANT_ID;
+const entraApiScope = import.meta.env.VITE_ENTRA_API_SCOPE;
 let initialized: Promise<void> | undefined;
+let entraClient: Promise<IPublicClientApplication> | undefined;
+let tokenRequest: Promise<string> | undefined;
 
 export async function loadWorkItemContext(): Promise<WorkItemContext> {
   if (mockEnabled) return mockContext();
@@ -52,9 +62,47 @@ export const authHeadersProvider: AuthHeadersProvider = {
     }
     initialized ??= initializeSdk();
     await initialized;
-    return { Authorization: `Bearer ${await SDK.getAppToken()}` };
+    tokenRequest ??= acquireApiToken();
+    try {
+      return { Authorization: `Bearer ${await tokenRequest}` };
+    } finally {
+      tokenRequest = undefined;
+    }
   },
 };
+
+async function acquireApiToken(): Promise<string> {
+  if (!entraClientId || !entraTenantId || !entraApiScope) {
+    throw new Error('Microsoft Entra authentication is not configured for this extension build.');
+  }
+  entraClient ??= createEntraClient(entraClientId, entraTenantId);
+  const client = await entraClient;
+  const scopes = [entraApiScope];
+  const account = client.getActiveAccount() ?? client.getAllAccounts()[0];
+  try {
+    const result = await client.acquireTokenSilent({ scopes, ...(account ? { account } : {}) });
+    if (result.account) client.setActiveAccount(result.account);
+    return result.accessToken;
+  } catch (error) {
+    if (!(error instanceof InteractionRequiredAuthError)) throw error;
+    const result = await client.acquireTokenPopup({ scopes });
+    if (result.account) client.setActiveAccount(result.account);
+    return result.accessToken;
+  }
+}
+
+async function createEntraClient(
+  clientId: string,
+  tenantId: string,
+): Promise<IPublicClientApplication> {
+  await SDK.enableNestedAppAuth();
+  return createNestablePublicClientApplication({
+    auth: {
+      clientId,
+      authority: `https://login.microsoftonline.com/${tenantId}`,
+    },
+  });
+}
 
 async function initializeSdk(): Promise<void> {
   await SDK.init({ applyTheme: true });

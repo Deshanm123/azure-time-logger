@@ -265,7 +265,7 @@ Do not add LLM/ML dependencies to MVP. Future AI/ML output must be evidence-back
 
 ## ADR-013 — Authenticate API requests with Azure DevOps extension app tokens
 
-**Status:** Accepted for MVP pilot; target-organization validation required
+**Status:** Superseded by ADR-015
 
 ### Context
 
@@ -281,6 +281,8 @@ The extension sends its signed app token as a bearer token. The API validates th
 - The extension certificate key must be rotated in the API when scope changes rotate the extension certificate.
 - The published extension and token claims must be verified in the Vita-Rapidus test organization before production rollout.
 - The current manifest needs no Azure DevOps REST scopes.
+
+The pilot later demonstrated that Azure DevOps no longer guarantees a readable `user_id` claim. Microsoft also documents that authentication-token claims can change, disappear, or become encrypted. ADR-015 replaces claim-dependent app-token identity.
 
 ---
 
@@ -314,3 +316,35 @@ preview deployment.
   committed to the repository.
 - Database schema rollout is an explicit release step before code that depends on
   a new migration is promoted.
+
+---
+
+## ADR-015 — Authenticate users with Microsoft Entra through Azure DevOps NAA
+
+**Status:** Accepted
+
+### Context
+
+The published pilot's valid Azure DevOps app token did not contain the previously
+observed `user_id` or `sub` claim. Token claims are not a supported identity data
+contract and may be removed or encrypted. The API still needs a cryptographically
+verified, stable owner identifier and must not trust a user ID supplied by browser
+request data.
+
+### Decision
+
+Use Azure DevOps Nested App Authentication with separate single-tenant Microsoft
+Entra SPA client and protected API registrations. The extension requests the
+API's delegated `access_as_user` scope. The API validates the token against the
+tenant's JWKS and requires the configured issuer, API audience, tenant,
+authorized SPA client, and scope. It stores the validated `tid:oid` pair as the
+stable owner identifier.
+
+### Consequences
+
+- No client secret is embedded in the extension.
+- First use may require user or administrator consent according to tenant policy.
+- The deployment requires public tenant, client, audience, and scope settings.
+- The manifest still requires no Azure DevOps REST scopes.
+- Legacy app-token validation remains only as a migration option and must not be
+  used to derive production identity from undocumented claims.

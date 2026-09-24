@@ -103,9 +103,9 @@ Only stable API-facing types belong in the shared package. Database models and A
 
 ## Authentication and authorization
 
-The MVP uses the supported Azure DevOps extension app-token flow. The extension obtains a signed JWT with `SDK.getAppToken()` and sends it as a bearer token. The API validates the token with the extension certificate key loaded from its deployment secret store, then derives the stable owner ID from the validated `user_id` claim. The browser never sends an authoritative `userId` in a time-log request.
+The MVP uses Microsoft Entra delegated authentication through Azure DevOps Nested App Authentication (NAA), with separate SPA client and protected API registrations. The extension requests the API's `access_as_user` scope. The API validates the Entra token signature through the tenant JWKS endpoint and enforces issuer, API audience, tenant, authorized SPA client, and scope before deriving the stable owner ID from `tid` plus `oid`. The browser never sends an authoritative `userId` in a time-log request.
 
-This flow must still be exercised after the extension is published in the target test organization because the certificate is generated during publishing. A separate header-based identity mode exists only for local development and tests; API startup rejects that mode in production.
+This flow must be exercised in the target test organization because tenant consent and NAA availability are host-managed. A separate header-based identity mode exists only for local development and tests; API startup rejects that mode in production. Legacy app-token validation remains available as a transition mode but is not used for production because Azure DevOps token claims are not a stable data contract.
 
 Rules:
 
@@ -115,7 +115,7 @@ Rules:
 - map authenticated identity to a stable internal user identifier;
 - enforce edit/delete ownership on the server.
 
-The initial manifest requests no Azure DevOps REST scopes. The extension uses host-provided SDK context rather than calling additional Azure DevOps REST endpoints.
+The manifest requests no Azure DevOps REST scopes. The extension uses host-provided SDK context and an Entra delegated scope belonging only to the Time Logger API.
 
 ## Core domain model
 
