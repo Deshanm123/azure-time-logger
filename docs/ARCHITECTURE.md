@@ -115,7 +115,7 @@ Rules:
 - map authenticated identity to a stable internal user identifier;
 - enforce edit/delete ownership on the server.
 
-The MVP pilot manifest requests no Azure DevOps REST scopes. A secure rollout using `azure-devops` mode must restore `vso.profile` so the backend can resolve the authenticated user's profile.
+The MVP pilot manifest requests `vso.work_write` so the extension can save the calculated Remaining Work value on the active work item. A secure rollout using `azure-devops` mode must additionally restore `vso.profile` so the backend can resolve the authenticated user's profile.
 
 ## Core domain model
 
@@ -195,13 +195,15 @@ sequenceDiagram
     Db-->>Api: Logs
     Api-->>Ext: Logs + summary
 
-    User->>Ext: Enter date/hours/activity/note
+    User->>Ext: Enter date/hours/time code/activity/note
     Ext->>Ext: Client validation
     Ext->>Api: POST time log
     Api->>Api: Authenticate + authorize + validate
     Api->>Db: Insert time log
     Db-->>Api: Saved record
     Api-->>Ext: Created
+    Ext->>ADO: Read Remaining Work or Original Estimate
+    Ext->>ADO: Save max(0, baseline - logged hours)
     Ext->>Api: Refresh logs/summary
     Api-->>Ext: Updated list + total
 ```

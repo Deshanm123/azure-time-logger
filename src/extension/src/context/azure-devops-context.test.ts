@@ -1,16 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const formService = vi.hoisted(() => ({
+  getFieldValue: vi.fn<(fieldReferenceName: string) => Promise<unknown>>(),
+  getFieldValues: vi.fn(async () => ({
+    'System.Id': 132,
+    'System.WorkItemType': 'Product Backlog Item',
+  })),
+  save: vi.fn(async () => undefined),
+  setFieldValue: vi.fn(async () => true),
+}));
+
 vi.mock('azure-devops-extension-sdk', () => ({
   getAccessToken: vi.fn(async () => 'azure-devops-access-token'),
   getContributionId: vi.fn(() => 'time-logs-work-item-page'),
   getHost: vi.fn(() => ({ id: 'organization-id' })),
-  getService: vi.fn(async () => ({
-    getFieldValue: vi.fn(async () => 'VH-IT-LKA'),
-    getFieldValues: vi.fn(async () => ({
-      'System.Id': 132,
-      'System.WorkItemType': 'Product Backlog Item',
-    })),
-  })),
+  getService: vi.fn(async () => formService),
   getUser: vi.fn(() => ({
     id: '8f1836ac-5b94-68c8-93fe-fff161218d6e',
     displayName: 'Deshan Maduranga',
@@ -28,11 +32,19 @@ import {
   authHeadersProvider,
   initializeAzureDevOpsContext,
   loadWorkItemContext,
+  subtractLoggedTimeFromRemainingWork,
 } from './azure-devops-context';
 
 describe('Azure DevOps contribution initialization', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    formService.getFieldValue.mockImplementation(async (fieldReferenceName) => {
+      if (fieldReferenceName === 'Time_Code') return 'VH-IT-LKA';
+      if (fieldReferenceName === 'Microsoft.VSTS.Scheduling.RemainingWork') return 5;
+      if (fieldReferenceName === 'Microsoft.VSTS.Scheduling.OriginalEstimate') return 8;
+      return undefined;
+    });
+    formService.setFieldValue.mockResolvedValue(true);
   });
 
   it('registers the work-item page provider before reporting that it loaded', async () => {
@@ -81,11 +93,28 @@ describe('Azure DevOps contribution initialization', () => {
       projectId: 'project-id',
       workItemId: 132,
       timeCode: 'VH-IT-LKA',
+      remainingWork: 5,
     });
 
-    const service = (await vi.mocked(SDK.getService).mock.results[0]?.value) as {
-      getFieldValue: ReturnType<typeof vi.fn>;
-    };
-    expect(service.getFieldValue).toHaveBeenCalledWith('Time_Code');
+    expect(formService.getFieldValue).toHaveBeenCalledWith('Time_Code');
   });
+
+  it.each([
+    { current: 5, original: 8, logged: 1.5, expected: 3.5 },
+    { current: null, original: 4, logged: 6, expected: 0 },
+  ])(
+    'calculates and saves Remaining Work from the correct baseline',
+    async ({ current, original, logged, expected }) => {
+      formService.getFieldValue.mockImplementation(async (fieldReferenceName) =>
+        fieldReferenceName === 'Microsoft.VSTS.Scheduling.RemainingWork' ? current : original,
+      );
+
+      await expect(subtractLoggedTimeFromRemainingWork(logged)).resolves.toBe(expected);
+      expect(formService.setFieldValue).toHaveBeenCalledWith(
+        'Microsoft.VSTS.Scheduling.RemainingWork',
+        expected,
+      );
+      expect(formService.save).toHaveBeenCalledOnce();
+    },
+  );
 });

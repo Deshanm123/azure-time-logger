@@ -180,9 +180,17 @@ Update and delete operations shall detect stale updates using a version, timesta
 
 ### FR-019 — Azure DevOps aggregate-field synchronization
 
-Automatic synchronization of logged totals into Azure DevOps `Completed Work`, `Remaining Work`, or custom `Actual Hours` is **not required for MVP**.
+After a new time log is persisted, the extension shall update
+`Microsoft.VSTS.Scheduling.RemainingWork` on the active work item.
 
-If added later, it shall be configurable and shall not silently overwrite user-managed values.
+If Remaining Work is blank, the baseline shall be
+`Microsoft.VSTS.Scheduling.OriginalEstimate`; otherwise the current Remaining
+Work value is the baseline. The submitted hours are subtracted and the result is
+clamped to zero. The final value shall be saved to the work item and displayed
+beside the total logged summary.
+
+Editing or deleting an existing time log does not reverse or recalculate
+Remaining Work in this MVP iteration.
 
 ### FR-020 — Data export
 

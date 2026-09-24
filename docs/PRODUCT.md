@@ -78,6 +78,7 @@ The tab contains:
 6. `Log Time` action.
 7. Existing time logs for the current work item.
 8. Total logged hours.
+9. Remaining Work beside the total, recalculated after each new log.
 
 The extension automatically obtains the current work-item context. The user does not manually enter a work-item ID.
 

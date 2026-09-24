@@ -145,7 +145,7 @@ Use PostgreSQL for persistence and Prisma as the initial TypeScript database acc
 
 ## ADR-007 — Do not automatically modify Azure DevOps work fields in MVP
 
-**Status:** Accepted
+**Status:** Superseded by ADR-020
 
 ### Context
 
@@ -441,3 +441,37 @@ selection from the current work item's `Time_Code` field when supported and use
 - Each time record retains the code selected when it was created or edited.
 - Existing rows are migrated to `VH-SUP-LKA`.
 - Adding or removing codes requires a coordinated contract/UI/API update.
+
+---
+
+## ADR-020 — Decrement Azure DevOps Remaining Work after new logs
+
+**Status:** Accepted
+
+### Context
+
+The pilot requires Azure DevOps Remaining Work to reflect each newly persisted
+time entry and to remain visible beside the Time Logger total. This supersedes
+ADR-007's decision to avoid aggregate-field updates in the MVP.
+
+### Decision
+
+After a create request succeeds, read
+`Microsoft.VSTS.Scheduling.RemainingWork`. When it is blank, use
+`Microsoft.VSTS.Scheduling.OriginalEstimate` as the baseline. Subtract the new
+entry's hours, clamp the result to zero, set Remaining Work through the work-item
+form service, and save the work item. Request the minimum `vso.work_write`
+manifest scope needed to update work items.
+
+Do not adjust Remaining Work for edit or delete operations until reversal rules
+are explicitly defined.
+
+### Consequences
+
+- The scheduling field and total summary update immediately after a new log.
+- Installing version `0.1.12` requires an organization administrator to approve
+  the new work-item read/write permission.
+- The form service saves the active work item, including any other pending valid
+  changes on the form.
+- If the API save succeeds but the work-item update fails, the log remains
+  stored and the UI reports the partial failure.

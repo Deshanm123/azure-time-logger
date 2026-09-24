@@ -85,6 +85,10 @@ h2 {
   border-radius: 14px;
   background: #e9f5f3;
 }
+.summary-cards {
+  display: flex;
+  gap: 12px;
+}
 .total-card span,
 .total-card small {
   display: block;
@@ -289,6 +293,9 @@ button:focus-visible {
   }
   .total-card {
     width: 100%;
+  }
+  .summary-cards {
+    flex-direction: column;
   }
   .form-grid {
     grid-template-columns: 1fr;

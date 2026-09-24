@@ -7,6 +7,7 @@ import { formatHours, TimeLogHistory } from './components/TimeLogHistory';
 import {
   authHeadersProvider,
   loadWorkItemContext,
+  subtractLoggedTimeFromRemainingWork,
   type WorkItemContext,
 } from './context/azure-devops-context';
 import type { FormValues } from './domain/validation';
@@ -25,6 +26,7 @@ export default function App() {
   const [context, setContext] = useState<WorkItemContext>();
   const [logs, setLogs] = useState<TimeLog[]>([]);
   const [total, setTotal] = useState(0);
+  const [remainingWork, setRemainingWork] = useState(0);
   const [editing, setEditing] = useState<TimeLog>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,7 @@ export default function App() {
           );
         }
         setContext(current);
+        setRemainingWork(current.remainingWork);
         setLoading(false);
       } catch (caught) {
         setError(messageFor(caught));
@@ -92,6 +95,13 @@ export default function App() {
       } else {
         await api.create(input, crypto.randomUUID());
         setNotice('Time logged successfully.');
+        try {
+          const nextRemainingWork = await subtractLoggedTimeFromRemainingWork(input.hours);
+          setRemainingWork(nextRemainingWork);
+          setNotice('Time logged and Remaining Work updated.');
+        } catch (caught) {
+          setError(`Time log saved, but Remaining Work was not updated. ${messageFor(caught)}`);
+        }
       }
       await refresh(context);
     } catch (caught) {
@@ -160,12 +170,19 @@ export default function App() {
           <h1>Time Logs</h1>
           <p>Capture the work behind this item while the context is fresh.</p>
         </div>
-        <div className="total-card" aria-label={`${formatHours(total)} total hours logged`}>
-          <span>Total logged</span>
-          <strong>{formatHours(total)}h</strong>
-          <small>
-            {logs.length} {logs.length === 1 ? 'entry' : 'entries'}
-          </small>
+        <div className="summary-cards">
+          <div className="total-card" aria-label={`${formatHours(total)} total hours logged`}>
+            <span>Total logged</span>
+            <strong>{formatHours(total)}h</strong>
+            <small>
+              {logs.length} {logs.length === 1 ? 'entry' : 'entries'}
+            </small>
+          </div>
+          <div className="total-card" aria-label={`${formatHours(remainingWork)} hours remaining`}>
+            <span>Remaining work</span>
+            <strong>{formatHours(remainingWork)}h</strong>
+            <small>Azure DevOps</small>
+          </div>
         </div>
       </header>
 

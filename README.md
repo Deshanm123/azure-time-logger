@@ -32,6 +32,7 @@ Users can:
 - log time against the currently opened work item;
 - view existing time logs;
 - see total logged hours;
+- see and automatically update Azure DevOps Remaining Work after a new log;
 - edit or delete their own entries, subject to permissions;
 - capture a date, hours, time code, activity, and note.
 
@@ -217,7 +218,9 @@ verify `https://<your-vercel-domain>/health` returns `{"status":"healthy"}`.
 4. Build with `VITE_API_BASE_URL` set for the target environment.
 5. Upload the VSIX privately and install it in the test organization.
 
-The restricted MVP package requests no Azure DevOps REST scopes and does not request an access token. Work-item, project, organization, and user context come from the host SDK. In `sdk-context` mode, the extension sends `SDK.getUser().id` to the API, which uses that UUID for ownership checks.
+The restricted MVP package requests `vso.work_write` so it can save the calculated Remaining Work value, but it does not request an access token. Work-item, project, organization, and user context come from the host SDK. In `sdk-context` mode, the extension sends `SDK.getUser().id` to the API, which uses that UUID for ownership checks.
+
+After a new time log is stored, the extension subtracts its hours from the current `Microsoft.VSTS.Scheduling.RemainingWork`. If that field is blank, it starts from `Microsoft.VSTS.Scheduling.OriginalEstimate`. The saved result is clamped to zero and displayed beside Total logged. Editing or deleting a log does not adjust Remaining Work in the MVP.
 
 `sdk-context` is an explicit pilot-only security compromise: request headers can be spoofed by a caller outside the extension. Limit the deployment to the test organization and do not use this mode for public or security-sensitive data. The retained `azure-devops` mode verifies the SDK access token through Azure DevOps `profiles/me` and is the required mode for a secure rollout.
 

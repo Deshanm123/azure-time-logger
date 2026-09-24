@@ -6,12 +6,14 @@ import App from './App';
 
 vi.mock('./context/azure-devops-context', () => ({
   authHeadersProvider: { getHeaders: vi.fn(async () => ({})) },
+  subtractLoggedTimeFromRemainingWork: vi.fn(async () => 3),
   loadWorkItemContext: vi.fn(async () => ({
     organizationId: 'organization',
     projectId: 'project',
     workItemId: 132,
     workItemType: 'Product Backlog Item',
     timeCode: 'VH-DEV-LKA',
+    remainingWork: 5,
     userId: 'user',
     userDisplayName: 'Test User',
   })),
@@ -28,6 +30,7 @@ describe('App without a configured backend', () => {
     expect(screen.getByLabelText('Hours')).toBeTruthy();
     expect(screen.getByLabelText('Activity')).toBeTruthy();
     expect(screen.getByLabelText('Time code')).toHaveProperty('value', 'VH-DEV-LKA');
+    expect(screen.getByLabelText('5 hours remaining')).toBeTruthy();
     for (const timeCode of timeCodes) {
       expect(screen.getByRole('option', { name: timeCode })).toBeTruthy();
     }
