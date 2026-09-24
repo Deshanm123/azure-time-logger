@@ -21,8 +21,9 @@ export interface AppDependencies {
 export async function buildApp(
   config: AppConfig,
   dependencies: AppDependencies = {},
+  fastifyFactory: typeof Fastify = Fastify,
 ): Promise<FastifyInstance> {
-  const app = Fastify({
+  const app = fastifyFactory({
     logger: config.nodeEnv !== 'test',
     genReqId: (request) => {
       const supplied = request.headers['x-correlation-id'];
