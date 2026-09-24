@@ -321,7 +321,7 @@ preview deployment.
 
 ## ADR-015 — Authenticate users with Microsoft Entra through Azure DevOps NAA
 
-**Status:** Superseded by ADR-016
+**Status:** Superseded by ADR-017
 
 ### Context
 
@@ -354,34 +354,31 @@ stable owner identifier.
 
 ---
 
-## ADR-016 — Support personal Microsoft accounts through an explicit tenant allowlist
+## ADR-017 — Resolve user identity with the Azure DevOps SDK access token
 
 **Status:** Accepted
 
 ### Context
 
-The Vita-Rapidus Azure DevOps organization identifies the pilot user as a
-personal Microsoft account (`msa`). Repeated NAA `GetToken` requests timed out
-after the client and API were configured as single-tenant registrations, even
-after tenant-wide consent was granted. The extension must support the identity
-type actually used by the target organization without accepting tokens from
-arbitrary tenants at the API.
+Nested App Authentication repeatedly timed out for the personal Microsoft
+account used by the pilot Azure DevOps organization. `SDK.getUser()` exposes the
+current user's UUID to the iframe, but a browser-supplied UUID is not sufficient
+proof of identity. Azure DevOps already issues the extension a user access token
+and provides an authenticated `profiles/me` endpoint.
 
 ### Decision
 
-Configure both Entra registrations for organizational directories and personal
-Microsoft accounts, and use the `common` authority in the extension. Keep API
-authorization closed to an explicit tenant allowlist containing the deployment's
-home tenant and Microsoft's consumer tenant. The API selects JWKS using only an
-allowlisted `tid`, then validates the exact tenant issuer, audience, authorized
-SPA client, and delegated scope. Ownership uses `tid:oid`, falling back to the
-documented pairwise `tid:sub` identifier only when `oid` is absent.
+Request the minimal `vso.profile` manifest scope and use `SDK.getAccessToken()`
+for API authentication. The API sends the token only to the fixed Azure DevOps
+Profile API endpoint and uses the returned profile UUID and display name as the
+authenticated user. The SDK user context remains display-only and is never used
+as authoritative ownership data.
 
 ### Consequences
 
-- Personal Microsoft accounts used by the target Azure DevOps organization can
-  request the Time Logger API scope through NAA.
-- Although the registrations can issue tokens for other organizational tenants,
-  the API rejects every tenant not present in `ENTRA_ALLOWED_TENANT_IDS`.
-- Each accepted tenant has its own issuer and JWKS validation path.
-- No client secret, PAT, or browser-supplied owner identifier is trusted.
+- The pilot no longer depends on Entra app registrations, NAA, or MSAL.
+- The backend makes one Azure DevOps profile request for each authenticated API
+  request; caching can be added later without changing the trust model.
+- The extension requests `vso.profile`, so users must approve the updated scope
+  when the new VSIX is installed.
+- Access tokens are never logged or stored in the database.

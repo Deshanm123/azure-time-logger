@@ -6,10 +6,11 @@ const schema = z
     PORT: z.coerce.number().int().positive().default(3000),
     HOST: z.string().default('0.0.0.0'),
     DATABASE_URL: z.string().min(1),
-    AUTH_MODE: z.enum(['entra', 'app-token', 'development-headers']).default('app-token'),
+    AUTH_MODE: z
+      .enum(['azure-devops', 'entra', 'app-token', 'development-headers'])
+      .default('app-token'),
     EXTENSION_SECRET: z.string().optional(),
     ENTRA_TENANT_ID: z.string().uuid().optional(),
-    ENTRA_ALLOWED_TENANT_IDS: z.string().optional(),
     ENTRA_CLIENT_ID: z.string().uuid().optional(),
     ENTRA_AUDIENCE: z.string().min(1).optional(),
     ENTRA_REQUIRED_SCOPE: z.string().min(1).default('access_as_user'),
@@ -43,18 +44,6 @@ const schema = z
         message: 'ENTRA_TENANT_ID and ENTRA_CLIENT_ID are required for Entra authentication',
       });
     }
-    if (value.ENTRA_ALLOWED_TENANT_IDS) {
-      for (const tenantId of value.ENTRA_ALLOWED_TENANT_IDS.split(',').map((item) => item.trim())) {
-        if (!z.string().uuid().safeParse(tenantId).success) {
-          context.addIssue({
-            code: 'custom',
-            path: ['ENTRA_ALLOWED_TENANT_IDS'],
-            message: 'ENTRA_ALLOWED_TENANT_IDS must contain comma-separated tenant UUIDs',
-          });
-          break;
-        }
-      }
-    }
   });
 
 export type AppConfig = ReturnType<typeof loadConfig>;
@@ -69,14 +58,6 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env) {
     authMode: value.AUTH_MODE,
     extensionSecret: value.EXTENSION_SECRET,
     entraTenantId: value.ENTRA_TENANT_ID,
-    entraAllowedTenantIds: Array.from(
-      new Set(
-        (value.ENTRA_ALLOWED_TENANT_IDS ?? value.ENTRA_TENANT_ID ?? '')
-          .split(',')
-          .map((tenantId) => tenantId.trim())
-          .filter(Boolean),
-      ),
-    ),
     entraClientId: value.ENTRA_CLIENT_ID,
     entraAudience:
       value.ENTRA_AUDIENCE ??

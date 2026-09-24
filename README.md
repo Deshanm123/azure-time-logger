@@ -188,12 +188,7 @@ repository with these settings:
    | Variable               | Value                                                                  |
    | ---------------------- | ---------------------------------------------------------------------- |
    | `DATABASE_URL`         | A pooled PostgreSQL connection string suitable for serverless traffic  |
-   | `AUTH_MODE`            | `entra`                                                                |
-   | `ENTRA_TENANT_ID`      | Microsoft Entra tenant ID                                              |
-   | `ENTRA_ALLOWED_TENANT_IDS` | Comma-separated accepted tenant IDs; include the home tenant and, for MSA users, `9188040d-6c67-4c5b-b112-36a304b66dad` |
-   | `ENTRA_CLIENT_ID`      | Authorized SPA client application ID                                   |
-   | `ENTRA_AUDIENCE`       | Separate protected API identifier, normally `api://<API_CLIENT_ID>`    |
-   | `ENTRA_REQUIRED_SCOPE` | Delegated API scope; defaults to `access_as_user`                      |
+   | `AUTH_MODE`            | `azure-devops`                                                         |
    | `CORS_ALLOWED_ORIGINS` | The exact deployed extension origin; comma-separate additional origins |
    | `BUSINESS_TIME_ZONE`   | Business IANA time zone, for example `Asia/Colombo`                    |
    | `MAX_HOURS_PER_ENTRY`  | Optional; defaults to `24`                                             |
@@ -216,13 +211,12 @@ verify `https://<your-vercel-domain>/health` returns `{"status":"healthy"}`.
 ### Connect the extension
 
 1. Deploy the API and PostgreSQL and apply the migration above.
-2. Register separate Microsoft Entra SPA client and protected API applications. For an Azure DevOps organization whose users sign in with personal Microsoft accounts, configure both registrations for organizational directories and personal Microsoft accounts. Expose `access_as_user` on the API, authorize the SPA client for it, grant tenant-wide admin consent for that delegated permission, and add `https://dev.azure.com/_public/_MsalPopup` as the SPA redirect URI.
-3. Set `AUTH_MODE=entra`, the `ENTRA_*` variables above, and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
-4. Replace `replace-with-your-publisher-id` in `src/extension/vss-extension.json`.
-5. Build with `VITE_API_BASE_URL`, `VITE_ENTRA_CLIENT_ID`, `VITE_ENTRA_AUTHORITY`, and the full `VITE_ENTRA_API_SCOPE` set for the target environment. Use `https://login.microsoftonline.com/common` when both organizational and personal Microsoft accounts are supported.
-6. Upload the VSIX privately and install it in the test organization.
+2. Set `AUTH_MODE=azure-devops` and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
+3. Replace `replace-with-your-publisher-id` in `src/extension/vss-extension.json`.
+4. Build with `VITE_API_BASE_URL` set for the target environment.
+5. Upload the VSIX privately and install it in the test organization.
 
-The manifest requests no Azure DevOps REST scopes. Work-item, project, and organization context come from the host SDK. Azure DevOps Nested App Authentication obtains an Entra access token for the extension API. The API validates its signature against the token tenant's keys and enforces an explicit tenant allowlist, audience, authorized client, and delegated scope. Ownership comes from `tid:oid`, with the pairwise `sub` claim as the documented fallback for personal accounts that omit `oid`. Client and tenant IDs are public configuration; never place client secrets in the frontend or manifest.
+The manifest requests only `vso.profile`. Work-item, project, organization, and display context come from the host SDK. The extension sends the Azure DevOps user access token returned by the SDK; the API calls the Azure DevOps `profiles/me` endpoint with that token and uses the returned profile UUID as the authoritative owner. Browser-supplied user IDs are never trusted.
 
 ## API
 

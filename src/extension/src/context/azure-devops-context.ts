@@ -3,15 +3,6 @@ import type {
   IWorkItemNotificationListener,
 } from 'azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices';
 import * as SDK from 'azure-devops-extension-sdk';
-import {
-  createNestablePublicClientApplication,
-  type IPublicClientApplication,
-} from '@azure/msal-browser';
-
-import {
-  isAuthenticationTimeout,
-  requiresInteractiveAuthentication,
-} from './msal-errors';
 
 const workItemFormServiceId = 'ms.vss-work-web.work-item-form';
 
@@ -29,12 +20,7 @@ export interface AuthHeadersProvider {
 }
 
 const mockEnabled = import.meta.env.DEV && import.meta.env.VITE_ENABLE_MOCK_CONTEXT === 'true';
-const entraClientId = import.meta.env.VITE_ENTRA_CLIENT_ID;
-const entraAuthority =
-  import.meta.env.VITE_ENTRA_AUTHORITY ?? 'https://login.microsoftonline.com/common';
-const entraApiScope = import.meta.env.VITE_ENTRA_API_SCOPE;
 let initialized: Promise<void> | undefined;
-let entraClient: Promise<IPublicClientApplication> | undefined;
 let tokenRequest: Promise<string> | undefined;
 
 const workItemPageProvider: IWorkItemNotificationListener = {
@@ -83,7 +69,7 @@ export const authHeadersProvider: AuthHeadersProvider = {
       return { 'X-Dev-User-Id': 'local-user', 'X-Dev-User-Display-Name': 'Local Developer' };
     }
     await initializeAzureDevOpsContext();
-    tokenRequest ??= acquireApiToken();
+    tokenRequest ??= SDK.getAccessToken();
     try {
       return { Authorization: `Bearer ${await tokenRequest}` };
     } finally {
@@ -91,49 +77,6 @@ export const authHeadersProvider: AuthHeadersProvider = {
     }
   },
 };
-
-async function acquireApiToken(): Promise<string> {
-  if (!entraClientId || !entraApiScope) {
-    throw new Error('Microsoft Entra authentication is not configured for this extension build.');
-  }
-  entraClient ??= createEntraClient(entraClientId, entraAuthority);
-  const client = await entraClient;
-  const scopes = [entraApiScope];
-  const account = client.getActiveAccount() ?? client.getAllAccounts()[0];
-  try {
-    const result = await client.acquireTokenSilent({ scopes, ...(account ? { account } : {}) });
-    if (result.account) client.setActiveAccount(result.account);
-    return result.accessToken;
-  } catch (error) {
-    if (!requiresInteractiveAuthentication(error)) throw error;
-    try {
-      const result = await client.acquireTokenPopup({ scopes });
-      if (result.account) client.setActiveAccount(result.account);
-      return result.accessToken;
-    } catch (interactiveError) {
-      if (isAuthenticationTimeout(interactiveError)) {
-        throw new Error(
-          'Microsoft sign-in timed out in Azure DevOps. Close and reopen the work item, then try again.',
-          { cause: interactiveError },
-        );
-      }
-      throw interactiveError;
-    }
-  }
-}
-
-async function createEntraClient(
-  clientId: string,
-  authority: string,
-): Promise<IPublicClientApplication> {
-  await SDK.enableNestedAppAuth();
-  return createNestablePublicClientApplication({
-    auth: {
-      clientId,
-      authority,
-    },
-  });
-}
 
 async function initializeSdk(): Promise<void> {
   await SDK.init({ applyTheme: true, loaded: false });

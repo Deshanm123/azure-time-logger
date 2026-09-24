@@ -1,9 +1,10 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
-import { createRemoteJWKSet, decodeJwt, jwtVerify, type JWTPayload } from 'jose';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
 
 import type { AppConfig } from '../config.js';
 import { AppError } from '../domain/errors.js';
 import type { CurrentUser } from '../domain/types.js';
+import { resolveAzureDevOpsUser } from './azure-devops-profile.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -11,10 +12,13 @@ declare module 'fastify' {
   }
 }
 
-export function createAuthenticator(config: AppConfig) {
+export function createAuthenticator(
+  config: AppConfig,
+  azureDevOpsUserResolver: (accessToken: string) => Promise<CurrentUser> = resolveAzureDevOpsUser,
+) {
   const verifyEntraToken =
     config.authMode === 'entra'
-      ? createEntraTokenVerifier(config.entraAllowedTenantIds, config.entraAudience as string)
+      ? createEntraTokenVerifier(config.entraTenantId as string, config.entraAudience as string)
       : undefined;
 
   return async function authenticate(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
@@ -31,11 +35,16 @@ export function createAuthenticator(config: AppConfig) {
     const authorization = request.headers.authorization;
     if (!authorization?.startsWith('Bearer ')) throw unauthorized();
     try {
+      if (config.authMode === 'azure-devops') {
+        request.currentUser = await azureDevOpsUserResolver(authorization.slice(7));
+        return;
+      }
+
       if (config.authMode === 'entra') {
         const payload = await (verifyEntraToken as EntraTokenVerifier)(authorization.slice(7));
         request.currentUser = userFromEntraToken(
           payload,
-          config.entraAllowedTenantIds,
+          config.entraTenantId as string,
           config.entraClientId as string,
           config.entraRequiredScope,
         );
@@ -65,23 +74,16 @@ export function createAuthenticator(config: AppConfig) {
 
 type EntraTokenVerifier = (token: string) => Promise<JWTPayload>;
 
-function createEntraTokenVerifier(allowedTenantIds: string[], audience: string): EntraTokenVerifier {
-  const allowedTenants = new Set(allowedTenantIds);
-  const keySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
+function createEntraTokenVerifier(tenantId: string, audience: string): EntraTokenVerifier {
+  const issuer = `https://login.microsoftonline.com/${tenantId}/v2.0`;
+  const keys = createRemoteJWKSet(
+    new URL(`https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`),
+  );
   return async (token) => {
-    const tenantId = stringClaim(decodeJwt(token).tid);
-    if (!tenantId || !allowedTenants.has(tenantId)) throw unauthorized();
-    let keys = keySets.get(tenantId);
-    if (!keys) {
-      keys = createRemoteJWKSet(
-        new URL(`https://login.microsoftonline.com/${tenantId}/discovery/v2.0/keys`),
-      );
-      keySets.set(tenantId, keys);
-    }
     const { payload } = await jwtVerify(token, keys, {
       algorithms: ['RS256'],
       audience,
-      issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`,
+      issuer,
     });
     return payload;
   };
@@ -89,28 +91,26 @@ function createEntraTokenVerifier(allowedTenantIds: string[], audience: string):
 
 export function userFromEntraToken(
   payload: JWTPayload,
-  allowedTenantIds: string[],
+  tenantId: string,
   clientId: string,
   requiredScope: string,
 ): CurrentUser {
   const tokenTenant = stringClaim(payload.tid);
   const authorizedClient = stringClaim(payload.azp) ?? stringClaim(payload.appid);
   const objectId = stringClaim(payload.oid);
-  const subject = objectId ?? stringClaim(payload.sub);
   const scopes = stringClaim(payload.scp)?.split(/\s+/) ?? [];
   if (
-    !tokenTenant ||
-    !allowedTenantIds.includes(tokenTenant) ||
+    tokenTenant !== tenantId ||
     authorizedClient !== clientId ||
-    !subject ||
+    !objectId ||
     !scopes.includes(requiredScope)
   ) {
     throw unauthorized();
   }
-  const id = objectId ? `${tokenTenant}:${objectId}` : `${tokenTenant}:sub:${subject}`;
+  const id = `${tokenTenant}:${objectId}`;
   return {
     id,
-    displayName: stringClaim(payload.name) ?? stringClaim(payload.preferred_username) ?? subject,
+    displayName: stringClaim(payload.name) ?? stringClaim(payload.preferred_username) ?? objectId,
   };
 }
 

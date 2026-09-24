@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('azure-devops-extension-sdk', () => ({
+  getAccessToken: vi.fn(async () => 'azure-devops-access-token'),
   getContributionId: vi.fn(() => 'time-logs-work-item-page'),
   init: vi.fn(async () => undefined),
   notifyLoadSucceeded: vi.fn(async () => undefined),
@@ -10,7 +11,7 @@ vi.mock('azure-devops-extension-sdk', () => ({
 
 import * as SDK from 'azure-devops-extension-sdk';
 
-import { initializeAzureDevOpsContext } from './azure-devops-context';
+import { authHeadersProvider, initializeAzureDevOpsContext } from './azure-devops-context';
 
 describe('Azure DevOps contribution initialization', () => {
   beforeEach(() => {
@@ -46,5 +47,12 @@ describe('Azure DevOps contribution initialization', () => {
     expect(vi.mocked(SDK.register).mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(SDK.notifyLoadSucceeded).mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
     );
+  });
+
+  it('uses the Azure DevOps user access token for API authentication', async () => {
+    await expect(authHeadersProvider.getHeaders()).resolves.toEqual({
+      Authorization: 'Bearer azure-devops-access-token',
+    });
+    expect(SDK.getAccessToken).toHaveBeenCalledOnce();
   });
 });

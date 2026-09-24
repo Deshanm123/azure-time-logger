@@ -103,9 +103,9 @@ Only stable API-facing types belong in the shared package. Database models and A
 
 ## Authentication and authorization
 
-The MVP uses Microsoft Entra delegated authentication through Azure DevOps Nested App Authentication (NAA), with separate SPA client and protected API registrations that support organizational and personal Microsoft accounts. The extension requests the API's `access_as_user` scope through the `common` authority. The API reads the untrusted `tid` only to select an explicitly allowed tenant, then validates the signature through that tenant's JWKS endpoint and enforces the exact issuer, API audience, authorized SPA client, and scope. It derives the stable owner ID from `tid` plus `oid`, or from `tid` plus the pairwise `sub` when a personal-account token omits `oid`. The browser never sends an authoritative `userId` in a time-log request.
+The MVP authenticates through the Azure DevOps Extension SDK. The extension requests the minimal `vso.profile` scope and sends the current user's Azure DevOps access token to the API. The API presents that token to the Azure DevOps `profiles/me` endpoint and derives ownership from the returned profile UUID. `SDK.getUser()` remains useful for display context, but the browser never supplies an authoritative `userId`.
 
-This flow must be exercised in the target test organization because tenant consent and NAA availability are host-managed. A separate header-based identity mode exists only for local development and tests; API startup rejects that mode in production. Legacy app-token validation remains available as a transition mode but is not used for production because Azure DevOps token claims are not a stable data contract.
+This flow must be exercised in the target test organization because access-token issuance is host-managed. A separate header-based identity mode exists only for local development and tests; API startup rejects that mode in production. Legacy app-token and Entra validation remain available as transition modes but are not used for production.
 
 Rules:
 
@@ -115,7 +115,7 @@ Rules:
 - map authenticated identity to a stable internal user identifier;
 - enforce edit/delete ownership on the server.
 
-The manifest requests no Azure DevOps REST scopes. The extension uses host-provided SDK context and an Entra delegated scope belonging only to the Time Logger API.
+The manifest requests only `vso.profile`, which is required to resolve the authenticated user's own Azure DevOps profile.
 
 ## Core domain model
 
