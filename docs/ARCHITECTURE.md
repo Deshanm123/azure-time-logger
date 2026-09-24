@@ -135,6 +135,7 @@ erDiagram
         string UserDisplayName
         date WorkDate
         decimal Hours
+        string TimeCode
         string Activity
         string Note
         datetime CreatedAt
@@ -159,6 +160,7 @@ UserId             varchar
 UserDisplayName    varchar
 WorkDate           date
 Hours              decimal(5,2)
+TimeCode           varchar(50)
 Activity           varchar
 Note               text
 CreatedAt          timestamptz

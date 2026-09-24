@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, type TimeLog as PrismaTimeLog } from '@prisma/client';
 import type {
   Activity,
+  TimeCode,
   TimeLogInput,
   UpdateTimeLogInput,
   WorkItemScope,
@@ -80,6 +81,7 @@ export class PrismaTimeLogRepository implements TimeLogRepository {
           workDate: asDatabaseDate(input.workDate),
           hours: input.hours,
           activity: input.activity,
+          timeCode: input.timeCode,
           note: input.note ?? null,
           version: { increment: 1 },
         },
@@ -117,5 +119,6 @@ function toStored(log: PrismaTimeLog): StoredTimeLog {
     workDate: log.workDate.toISOString().slice(0, 10),
     hours: log.hours.toNumber(),
     activity: log.activity as Activity,
+    timeCode: log.timeCode as TimeCode,
   };
 }

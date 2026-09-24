@@ -3,14 +3,17 @@ import type {
   IWorkItemNotificationListener,
 } from 'azure-devops-extension-api/WorkItemTracking/WorkItemTrackingServices';
 import * as SDK from 'azure-devops-extension-sdk';
+import { timeCodes, type TimeCode } from '@time-logger/contracts';
 
 const workItemFormServiceId = 'ms.vss-work-web.work-item-form';
+const timeCodeField = import.meta.env.VITE_TIME_CODE_FIELD?.trim() || 'Time_Code';
 
 export interface WorkItemContext {
   organizationId: string;
   projectId: string;
   workItemId: number;
   workItemType: string;
+  timeCode: TimeCode;
   userId: string;
   userDisplayName: string;
 }
@@ -50,6 +53,7 @@ export async function loadWorkItemContext(): Promise<WorkItemContext> {
   const webContext = SDK.getWebContext();
   const host = SDK.getHost();
   const user = SDK.getUser();
+  const timeCode = await loadDefaultTimeCode(service);
   if (!webContext.project?.id) throw new Error('Azure DevOps project context is unavailable.');
 
   return {
@@ -57,6 +61,7 @@ export async function loadWorkItemContext(): Promise<WorkItemContext> {
     projectId: webContext.project.id,
     workItemId,
     workItemType: String(fields['System.WorkItemType'] ?? ''),
+    timeCode,
     userId: user.id,
     userDisplayName: user.displayName,
   };
@@ -91,7 +96,21 @@ function mockContext(): WorkItemContext {
     projectId: query.get('projectId') ?? 'local-project',
     workItemId: Number(query.get('workItemId') ?? 160637),
     workItemType: query.get('workItemType') ?? 'Task',
+    timeCode: asTimeCode(query.get('timeCode')) ?? timeCodes[0],
     userId: 'local-user',
     userDisplayName: 'Local Developer',
   };
+}
+
+async function loadDefaultTimeCode(service: IWorkItemFormService): Promise<TimeCode> {
+  try {
+    return asTimeCode(await service.getFieldValue(timeCodeField)) ?? timeCodes[0];
+  } catch {
+    return timeCodes[0];
+  }
+}
+
+function asTimeCode(value: unknown): TimeCode | undefined {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return timeCodes.find((timeCode) => timeCode === normalized);
 }

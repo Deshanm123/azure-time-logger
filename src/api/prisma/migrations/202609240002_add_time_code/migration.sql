@@ -1,0 +1,5 @@
+ALTER TABLE "TimeLog" ADD COLUMN "timeCode" VARCHAR(50);
+
+UPDATE "TimeLog" SET "timeCode" = 'VH-SUP-LKA' WHERE "timeCode" IS NULL;
+
+ALTER TABLE "TimeLog" ALTER COLUMN "timeCode" SET NOT NULL;

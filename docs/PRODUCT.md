@@ -21,6 +21,7 @@ What is missing for this use case is a convenient daily log such as:
 - which work item the time belongs to;
 - date worked;
 - hours spent;
+- time code;
 - activity type;
 - short note describing the work;
 - history of edits.
@@ -51,7 +52,7 @@ BI analysts and engineering-operations users who need structured data for report
 
 ## Primary user story
 
-> As a team member, I want to record the time I spent on an Azure DevOps work item, including the date, activity, and note, so that my work is captured accurately without using another application.
+> As a team member, I want to record the time I spent on an Azure DevOps work item, including the date, time code, activity, and note, so that my work is captured accurately without using another application.
 
 ## Supporting user stories
 
@@ -71,11 +72,12 @@ The tab contains:
 
 1. Date.
 2. Hours.
-3. Activity.
-4. Note.
-5. `Log Time` action.
-6. Existing time logs for the current work item.
-7. Total logged hours.
+3. Time code, defaulted from the work item's `Time_Code` field.
+4. Activity.
+5. Note.
+6. `Log Time` action.
+7. Existing time logs for the current work item.
+8. Total logged hours.
 
 The extension automatically obtains the current work-item context. The user does not manually enter a work-item ID.
 
@@ -110,6 +112,7 @@ Time Logs
 
 Date:      23 Sep 2026
 Hours:     1.5
+Time code: VH-DEV-LKA
 Activity:  Development
 Note:      Validated stale branches merged to main
 
@@ -180,6 +183,7 @@ Included:
 - Delete own log.
 - Total logged hours.
 - Activity selection.
+- Time-code selection defaulted from the work item.
 - Validation.
 - Persistent backend storage.
 - User/work-item context capture.

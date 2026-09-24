@@ -145,6 +145,7 @@ export default function App() {
         workDate: editing.workDate,
         hours: String(editing.hours),
         activity: editing.activity,
+        timeCode: editing.timeCode,
         note: editing.note ?? '',
       }
     : undefined;

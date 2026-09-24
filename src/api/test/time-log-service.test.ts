@@ -18,6 +18,7 @@ function input(overrides: Partial<TimeLogInput> = {}): TimeLogInput {
     workDate: '2026-09-23',
     hours: 1.5,
     activity: 'Development',
+    timeCode: 'VH-DEV-LKA',
     note: 'Built MVP',
     ...overrides,
   };
@@ -51,6 +52,13 @@ describe('TimeLogService', () => {
     await expect(service.create(input({ workDate: '2026-02-31' }), owner)).rejects.toBeInstanceOf(
       ValidationError,
     );
+  });
+
+  it('rejects an unsupported time code', async () => {
+    const { service } = setup();
+    await expect(
+      service.create(input({ timeCode: 'INVALID' as TimeLogInput['timeCode'] }), owner),
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it('allows an owner to update and soft-delete their log', async () => {

@@ -1,9 +1,10 @@
-import { activities, type Activity } from '@time-logger/contracts';
+import { activities, timeCodes, type Activity, type TimeCode } from '@time-logger/contracts';
 
 export interface FormValues {
   workDate: string;
   hours: string;
   activity: Activity;
+  timeCode: TimeCode;
   note: string;
 }
 
@@ -23,6 +24,7 @@ export function validateForm(values: FormValues, today = todayLocal()): Record<s
     errors.hours = 'Hours must be greater than zero.';
   else if (hours > 24) errors.hours = 'Hours cannot exceed 24.';
   if (!activities.includes(values.activity)) errors.activity = 'Select a supported activity.';
+  if (!timeCodes.includes(values.timeCode)) errors.timeCode = 'Select a supported time code.';
   if (values.note.length > 1000) errors.note = 'Note cannot exceed 1000 characters.';
   return errors;
 }

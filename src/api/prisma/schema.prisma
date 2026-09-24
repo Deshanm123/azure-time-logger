@@ -17,6 +17,7 @@ model TimeLog {
   workDate        DateTime  @db.Date
   hours           Decimal   @db.Decimal(5, 2)
   activity        String    @db.VarChar(100)
+  timeCode        String    @db.VarChar(50)
   note            String?   @db.VarChar(1000)
   createdAt       DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt       DateTime  @updatedAt @db.Timestamptz(3)
@@ -29,4 +30,3 @@ model TimeLog {
   @@index([organizationId, projectId, workDate])
   @@unique([userId, idempotencyKey])
 }
-

@@ -135,6 +135,7 @@ export class TimeLogService {
       workDate: log.workDate,
       hours: log.hours,
       activity: log.activity,
+      timeCode: log.timeCode,
       note: log.note,
       createdAt: log.createdAt.toISOString(),
       updatedAt: log.updatedAt.toISOString(),

@@ -3,10 +3,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('azure-devops-extension-sdk', () => ({
   getAccessToken: vi.fn(async () => 'azure-devops-access-token'),
   getContributionId: vi.fn(() => 'time-logs-work-item-page'),
+  getHost: vi.fn(() => ({ id: 'organization-id' })),
+  getService: vi.fn(async () => ({
+    getFieldValue: vi.fn(async () => 'VH-IT-LKA'),
+    getFieldValues: vi.fn(async () => ({
+      'System.Id': 132,
+      'System.WorkItemType': 'Product Backlog Item',
+    })),
+  })),
   getUser: vi.fn(() => ({
     id: '8f1836ac-5b94-68c8-93fe-fff161218d6e',
     displayName: 'Deshan Maduranga',
   })),
+  getWebContext: vi.fn(() => ({ project: { id: 'project-id' } })),
   init: vi.fn(async () => undefined),
   notifyLoadSucceeded: vi.fn(async () => undefined),
   ready: vi.fn(async () => undefined),
@@ -15,7 +24,11 @@ vi.mock('azure-devops-extension-sdk', () => ({
 
 import * as SDK from 'azure-devops-extension-sdk';
 
-import { authHeadersProvider, initializeAzureDevOpsContext } from './azure-devops-context';
+import {
+  authHeadersProvider,
+  initializeAzureDevOpsContext,
+  loadWorkItemContext,
+} from './azure-devops-context';
 
 describe('Azure DevOps contribution initialization', () => {
   beforeEach(() => {
@@ -60,5 +73,19 @@ describe('Azure DevOps contribution initialization', () => {
     });
     expect(SDK.getUser).toHaveBeenCalledOnce();
     expect(SDK.getAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('uses the work item Time_Code field as the default time code', async () => {
+    await expect(loadWorkItemContext()).resolves.toMatchObject({
+      organizationId: 'organization-id',
+      projectId: 'project-id',
+      workItemId: 132,
+      timeCode: 'VH-IT-LKA',
+    });
+
+    const service = (await vi.mocked(SDK.getService).mock.results[0]?.value) as {
+      getFieldValue: ReturnType<typeof vi.fn>;
+    };
+    expect(service.getFieldValue).toHaveBeenCalledWith('Time_Code');
   });
 });

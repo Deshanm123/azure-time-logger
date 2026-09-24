@@ -38,6 +38,7 @@ export function TimeLogHistory({ logs, busyId, onEdit, onDelete }: Props) {
           </div>
           <div className="history-content">
             <div className="history-meta">
+              <span className="activity-tag">{log.timeCode}</span>
               <span className="activity-tag">{log.activity}</span>
               <span>{log.userDisplayName}</span>
               {log.updatedAt !== log.createdAt && <span>Edited</span>}

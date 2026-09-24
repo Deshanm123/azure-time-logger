@@ -1,4 +1,9 @@
-import { activities, type TimeLogInput, type UpdateTimeLogInput } from '@time-logger/contracts';
+import {
+  activities,
+  timeCodes,
+  type TimeLogInput,
+  type UpdateTimeLogInput,
+} from '@time-logger/contracts';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 
@@ -15,6 +20,7 @@ const inputSchema = scopeSchema.extend({
   workDate: z.string(),
   hours: z.coerce.number(),
   activity: z.enum(activities),
+  timeCode: z.enum(timeCodes),
   note: z.string().nullable().optional(),
 });
 const updateSchema = inputSchema.extend({ version: z.coerce.number().int() });

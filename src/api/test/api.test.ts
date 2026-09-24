@@ -60,6 +60,7 @@ describe('time-log API', () => {
         workDate: '2026-09-23',
         hours: 1,
         activity: 'Development',
+        timeCode: 'VH-DEV-LKA',
         userId: 'attacker-controlled',
       },
     });
@@ -67,6 +68,7 @@ describe('time-log API', () => {
     expect(response.json()).toMatchObject({
       userId: 'trusted-user',
       userDisplayName: 'Trusted User',
+      timeCode: 'VH-DEV-LKA',
     });
   });
 });

@@ -1,5 +1,6 @@
 import type {
   Activity,
+  TimeCode,
   TimeLogInput,
   UpdateTimeLogInput,
   WorkItemScope,
@@ -17,6 +18,7 @@ export interface StoredTimeLog extends WorkItemScope {
   workDate: string;
   hours: number;
   activity: Activity;
+  timeCode: TimeCode;
   note: string | null;
   createdAt: Date;
   updatedAt: Date;

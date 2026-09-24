@@ -6,6 +6,7 @@ const valid: FormValues = {
   workDate: '2026-09-23',
   hours: '1.5',
   activity: 'Development',
+  timeCode: 'VH-DEV-LKA',
   note: 'Implemented validation',
 };
 
@@ -20,5 +21,14 @@ describe('validateForm', () => {
     expect(validateForm({ ...valid, workDate: '2026-09-24' }, '2026-09-23').workDate).toMatch(
       /future/,
     );
+  });
+
+  it('rejects an unsupported time code', () => {
+    expect(
+      validateForm(
+        { ...valid, timeCode: 'INVALID' as FormValues['timeCode'] },
+        '2026-09-23',
+      ).timeCode,
+    ).toMatch(/supported/);
   });
 });

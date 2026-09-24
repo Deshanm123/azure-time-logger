@@ -415,3 +415,29 @@ Keep the secure `azure-devops` token/profile mode in the codebase for later use.
   regulated data.
 - A wider or production rollout must switch back to verified authentication and
   restore the required manifest scope.
+
+---
+
+## ADR-019 — Store a controlled time code on every log entry
+
+**Status:** Accepted
+
+### Context
+
+The Vita-Rapidus process exposes a `Time_Code` work-item field, while downstream
+administration and reporting need the selected code preserved on each granular
+time record. A work-item value can change after time is logged, so reading it
+only during reporting would lose the historical selection.
+
+### Decision
+
+Add a required `timeCode` field to the time-log contract and database. Present a
+fixed nine-value pick list in the entry form. For new entries, initialize the
+selection from the current work item's `Time_Code` field when supported and use
+`VH-SUP-LKA` otherwise. Persist the selected value and show it in history.
+
+### Consequences
+
+- Each time record retains the code selected when it was created or edited.
+- Existing rows are migrated to `VH-SUP-LKA`.
+- Adding or removing codes requires a coordinated contract/UI/API update.

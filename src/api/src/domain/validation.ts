@@ -1,4 +1,4 @@
-import { activities, type TimeLogInput } from '@time-logger/contracts';
+import { activities, timeCodes, type TimeLogInput } from '@time-logger/contracts';
 
 import { ValidationError } from './errors.js';
 
@@ -38,6 +38,7 @@ export function validateTimeLog(input: TimeLogInput, maxHours: number, today: st
     errors.hours = [`Hours cannot exceed ${maxHours}.`];
   }
   if (!activities.includes(input.activity)) errors.activity = ['Activity is not supported.'];
+  if (!timeCodes.includes(input.timeCode)) errors.timeCode = ['Time code is not supported.'];
   if (input.note && input.note.length > 1000) errors.note = ['Note cannot exceed 1000 characters.'];
   if (Object.keys(errors).length) throw new ValidationError(errors);
 }

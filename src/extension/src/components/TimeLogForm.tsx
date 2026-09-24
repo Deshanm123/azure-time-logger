@@ -1,4 +1,4 @@
-import { activities, type TimeLogInput } from '@time-logger/contracts';
+import { activities, timeCodes, type TimeCode, type TimeLogInput } from '@time-logger/contracts';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 
 import type { WorkItemContext } from '../context/azure-devops-context';
@@ -14,10 +14,11 @@ interface Props {
   onSubmit(input: TimeLogInput): Promise<void>;
 }
 
-const emptyValues = (): FormValues => ({
+const emptyValues = (timeCode: TimeCode): FormValues => ({
   workDate: todayLocal(),
   hours: '',
   activity: 'Development',
+  timeCode,
   note: '',
 });
 
@@ -30,10 +31,13 @@ export function TimeLogForm({
   onCancel,
   onSubmit,
 }: Props) {
-  const [values, setValues] = useState<FormValues>(initial ?? emptyValues());
+  const [values, setValues] = useState<FormValues>(initial ?? emptyValues(context.timeCode));
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => setValues(initial ?? emptyValues()), [initial]);
+  useEffect(
+    () => setValues(initial ?? emptyValues(context.timeCode)),
+    [context.timeCode, initial],
+  );
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -47,9 +51,10 @@ export function TimeLogForm({
       workDate: values.workDate,
       hours: Number(values.hours),
       activity: values.activity,
+      timeCode: values.timeCode,
       note: values.note.trim() || null,
     });
-    if (!editing) setValues(emptyValues());
+    if (!editing) setValues(emptyValues(context.timeCode));
   }
 
   return (
@@ -93,6 +98,21 @@ export function TimeLogForm({
           >
             {activities.map((activity) => (
               <option key={activity}>{activity}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Time code" error={errors.timeCode}>
+          <select
+            value={values.timeCode}
+            onChange={(event) =>
+              setValues({ ...values, timeCode: event.target.value as FormValues['timeCode'] })
+            }
+            aria-invalid={Boolean(errors.timeCode)}
+          >
+            {timeCodes.map((timeCode) => (
+              <option key={timeCode} value={timeCode}>
+                {timeCode}
+              </option>
             ))}
           </select>
         </Field>

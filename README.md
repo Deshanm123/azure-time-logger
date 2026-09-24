@@ -15,10 +15,10 @@ This project adds that missing layer.
 
 Example:
 
-| Date       | User        | Hours | Activity    | Note                                    |
-| ---------- | ----------- | ----: | ----------- | --------------------------------------- |
-| 2026-09-21 | Developer A |   2.0 | Development | Implemented booking API validation      |
-| 2026-09-22 | Developer A |   1.5 | Code Review | Reviewed booking API PR                 |
+| Date       | User        | Hours | Time code  | Activity    | Note                               |
+| ---------- | ----------- | ----: | ---------- | ----------- | ---------------------------------- |
+| 2026-09-21 | Developer A |   2.0 | VH-DEV-LKA | Development | Implemented booking API validation |
+| 2026-09-22 | Developer A |   1.5 | VH-DEV-LKA | Code Review | Reviewed booking API PR            |
 | 2026-09-23 | QA A        |   2.0 | Testing     | Regression tested duplicate booking fix |
 
 The work item can still show a summarized total, while the Time Logger retains the detailed history.
@@ -33,7 +33,7 @@ Users can:
 - view existing time logs;
 - see total logged hours;
 - edit or delete their own entries, subject to permissions;
-- capture a date, hours, activity, and note.
+- capture a date, hours, time code, activity, and note.
 
 Future phases add weekly timesheets, reporting, optional synchronization to Azure DevOps aggregate fields, data-lake ingestion, Power BI reporting, Ruddr integration, and ML/AI-assisted delivery insights.
 
@@ -95,6 +95,7 @@ A time log is a first-class record, not just a number copied into a work-item fi
   "userDisplayName": "Developer A",
   "workDate": "2026-09-23",
   "hours": 2.5,
+  "timeCode": "VH-DEV-LKA",
   "activity": "Development",
   "note": "Implemented API validation",
   "createdAt": "2026-09-23T09:10:00Z",
@@ -107,7 +108,7 @@ A time log is a first-class record, not just a number copied into a work-item fi
 ```mermaid
 flowchart LR
     A[Open Azure DevOps work item] --> B[Open Time Logs tab]
-    B --> C[Enter date, hours, activity, note]
+    B --> C[Enter date, hours, time code, activity, note]
     C --> D[Validate]
     D --> E[Save through Time Logger API]
     E --> F[Persist time-log record]

@@ -12,6 +12,20 @@ export const activities = [
 
 export type Activity = (typeof activities)[number];
 
+export const timeCodes = [
+  'VH-SUP-LKA',
+  'VH-PS-LKA',
+  'VH-DEV-LKA',
+  'VH-IT-LKA',
+  'VH-ADM-LKA',
+  'VH-ADM-Administration',
+  'VH-ADM-Business Systems',
+  'VH-ADM-HR',
+  'VH-ADM-Finance',
+] as const;
+
+export type TimeCode = (typeof timeCodes)[number];
+
 export interface WorkItemScope {
   organizationId: string;
   projectId: string;
@@ -22,6 +36,7 @@ export interface TimeLogInput extends WorkItemScope {
   workDate: string;
   hours: number;
   activity: Activity;
+  timeCode: TimeCode;
   note?: string | null;
 }
 

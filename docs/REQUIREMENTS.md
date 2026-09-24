@@ -32,6 +32,7 @@ A user shall be able to create a time log containing:
 
 - work date;
 - hours;
+- time code;
 - activity;
 - note;
 - current work-item ID;
@@ -76,6 +77,24 @@ Initial supported activities:
 
 The activity model should be designed so organization-specific values can be added later.
 
+### FR-007A — Time code
+
+Time code shall be required and selected from:
+
+- `VH-SUP-LKA`
+- `VH-PS-LKA`
+- `VH-DEV-LKA`
+- `VH-IT-LKA`
+- `VH-ADM-LKA`
+- `VH-ADM-Administration`
+- `VH-ADM-Business Systems`
+- `VH-ADM-HR`
+- `VH-ADM-Finance`
+
+For a new entry, the extension shall use the current work item's `Time_Code`
+field when it contains a supported value. It shall otherwise default to
+`VH-SUP-LKA`. Users may change the selection before saving.
+
 ### FR-008 — Note
 
 A note shall be optional in the data model but the UI should encourage a concise description.
@@ -95,6 +114,7 @@ At minimum show:
 - date;
 - user;
 - hours;
+- time code;
 - activity;
 - note;
 - created/updated indicator where useful.
@@ -194,6 +214,7 @@ Exact endpoint naming may change during implementation.
   "workItemId": 160637,
   "workDate": "2026-09-23",
   "hours": 2.5,
+  "timeCode": "VH-DEV-LKA",
   "activity": "Development",
   "note": "Implemented API validation"
 }
@@ -214,6 +235,7 @@ UserId
 UserDisplayName
 WorkDate
 Hours
+TimeCode
 Activity
 Note
 CreatedAt
@@ -308,6 +330,7 @@ The data model shall preserve the dimensions required for later analysis:
 - project;
 - user;
 - work date;
+- time code;
 - activity;
 - hours.
 
@@ -325,7 +348,7 @@ The MVP is complete when:
 2. A Time Logs tab is visible on a configured work-item type.
 3. Opening a saved work item automatically establishes its ID/context.
 4. User can save a valid time log.
-5. Invalid hours/date are rejected.
+5. Invalid hours/date/time codes are rejected.
 6. Saved log remains after refresh.
 7. User can edit their own log.
 8. User can delete their own log.
