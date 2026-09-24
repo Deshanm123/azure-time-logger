@@ -45,6 +45,7 @@ describe('Azure DevOps contribution initialization', () => {
       return undefined;
     });
     formService.setFieldValue.mockResolvedValue(true);
+    formService.save.mockResolvedValue(undefined);
   });
 
   it('registers the work-item page provider before reporting that it loaded', async () => {
@@ -99,9 +100,24 @@ describe('Azure DevOps contribution initialization', () => {
     expect(formService.getFieldValue).toHaveBeenCalledWith('Time_Code');
   });
 
+  it('uses Original Estimate for the initial summary when Remaining Work is blank', async () => {
+    formService.getFieldValue.mockImplementation(async (fieldReferenceName) => {
+      if (fieldReferenceName === 'Time_Code') return 'VH-IT-LKA';
+      if (fieldReferenceName === 'Microsoft.VSTS.Scheduling.RemainingWork') return '';
+      if (fieldReferenceName === 'Microsoft.VSTS.Scheduling.OriginalEstimate') return 7.5;
+      return undefined;
+    });
+
+    await expect(loadWorkItemContext()).resolves.toMatchObject({ remainingWork: 7.5 });
+  });
+
   it.each([
     { current: 5, original: 8, logged: 1.5, expected: 3.5 },
     { current: null, original: 4, logged: 6, expected: 0 },
+    { current: '', original: 8, logged: 2, expected: 6 },
+    { current: 0, original: 8, logged: 2, expected: 0 },
+    { current: 1.1, original: 8, logged: 0.2, expected: 0.9 },
+    { current: undefined, original: undefined, logged: 2, expected: 0 },
   ])(
     'calculates and saves Remaining Work from the correct baseline',
     async ({ current, original, logged, expected }) => {
@@ -117,4 +133,20 @@ describe('Azure DevOps contribution initialization', () => {
       expect(formService.save).toHaveBeenCalledOnce();
     },
   );
+
+  it('does not save when Azure DevOps rejects the field update', async () => {
+    formService.setFieldValue.mockResolvedValue(false);
+
+    await expect(subtractLoggedTimeFromRemainingWork(1)).rejects.toThrow(
+      'Azure DevOps did not accept the Remaining Work update.',
+    );
+    expect(formService.save).not.toHaveBeenCalled();
+  });
+
+  it('reports an Azure DevOps work-item save failure', async () => {
+    formService.save.mockRejectedValue(new Error('save failed'));
+
+    await expect(subtractLoggedTimeFromRemainingWork(1)).rejects.toThrow('save failed');
+    expect(formService.setFieldValue).toHaveBeenCalledOnce();
+  });
 });

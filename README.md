@@ -247,6 +247,7 @@ OpenAPI UI is available at `/docs` outside production. Create accepts an `Idempo
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md) — system structure and data flows.
 - [DECISIONS.md](./docs/DECISIONS.md) — important technical/product decisions.
 - [ROADMAP.md](./docs/ROADMAP.md) — staged delivery plan.
+- [TEST_CASES.md](./docs/TEST_CASES.md) — MVP automated and live acceptance scenarios.
 - [AGENTS.md](./docs/AGENTS.md) — instructions for Codex and other coding agents.
 
 ## Definition of MVP success
