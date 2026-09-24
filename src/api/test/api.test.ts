@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { buildApp } from '../src/app.js';
+import { buildApp } from '../src/fastify-app.js';
 import { TimeLogService } from '../src/domain/time-log-service.js';
 import { MemoryRepository } from './memory-repository.js';
 
