@@ -10,3 +10,4 @@ coverage/
 src/api/prisma/*.db
 .vercel
 .env*
+!src/extension/.env.production
