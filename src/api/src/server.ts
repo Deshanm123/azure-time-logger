@@ -6,4 +6,4 @@ import { loadConfig } from './config.js';
 const config = loadConfig();
 const app = await buildApp(config, {}, Fastify);
 
-export default app;
+void app.listen({ port: config.port, host: config.host });
