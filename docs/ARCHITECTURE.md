@@ -352,14 +352,27 @@ Use the Vita-Rapidus test Azure DevOps project for end-to-end validation before 
 
 ## Deployment shape
 
-MVP deployment can remain small:
+The MVP backend is deployed as a single Fastify application on Vercel Functions.
+Vercel's native Fastify integration routes all API paths to that function. The
+project root is `src/api`; the build includes the shared `packages/contracts`
+workspace and generates Prisma Client.
+
+Fastify and Prisma are initialized once when a function instance starts and are
+reused while that instance remains warm. The runtime `DATABASE_URL` must use a
+serverless-appropriate pooled PostgreSQL endpoint. Prisma migrations are applied
+as a separate release operation using a direct database connection where the
+provider offers one; preview deployments do not run migrations automatically.
+The pilot function and managed database use Vercel's Singapore region (`sin1`) to
+keep the application and data close to each other and to the initial users.
+
+The deployment remains small:
 
 ```text
 Azure DevOps Extension Package
             +
-Small Node.js + TypeScript API
+Fastify API on Vercel Functions
             +
-PostgreSQL Database
+Managed PostgreSQL Database
 ```
 
 A data lake, queue, event bus, ML service, or LLM service is not required to run the core time logger.

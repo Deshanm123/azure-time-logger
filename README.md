@@ -170,7 +170,46 @@ The VSIX is written under `src/extension/` and ignored by Git.
 
 ## Azure DevOps pilot setup
 
-1. Deploy the API and PostgreSQL, set `DATABASE_URL`, and run `npm run prisma:migrate -w @time-logger/api`.
+### Deploy the API to Vercel
+
+The API uses Vercel's native Fastify support. Create a Vercel project from this
+repository with these settings:
+
+1. Set **Root Directory** to `src/api`.
+2. Keep **Include source files outside of the Root Directory in the Build Step**
+   enabled so the API can use the `packages/contracts` workspace.
+3. Keep the detected **Fastify** framework preset. Do not set an output directory.
+4. Keep the function in the configured Singapore region (`sin1`) and provision
+   the database in the same region.
+5. Add these production environment variables:
+
+   | Variable               | Value                                                                  |
+   | ---------------------- | ---------------------------------------------------------------------- |
+   | `DATABASE_URL`         | A pooled PostgreSQL connection string suitable for serverless traffic  |
+   | `AUTH_MODE`            | `app-token`                                                            |
+   | `EXTENSION_SECRET`     | The 32+ character extension certificate key from Azure DevOps          |
+   | `CORS_ALLOWED_ORIGINS` | The exact deployed extension origin; comma-separate additional origins |
+   | `BUSINESS_TIME_ZONE`   | Business IANA time zone, for example `Asia/Colombo`                    |
+   | `MAX_HOURS_PER_ENTRY`  | Optional; defaults to `24`                                             |
+
+`NODE_ENV=production` is supplied by Vercel. `src/api/vercel.json` selects the
+Fastify preset, while the API's `vercel-build` script builds the shared contracts
+and generates Prisma Client.
+
+Before the first deployment, and after every committed Prisma migration, apply
+migrations explicitly from a trusted workstation or CI environment. Use the
+database provider's direct/non-pooled connection when it provides one:
+
+```bash
+DATABASE_URL='postgresql://...' npm run prisma:migrate -w @time-logger/api
+```
+
+Do not run migrations automatically in every Vercel preview build. After deploy,
+verify `https://<your-vercel-domain>/health` returns `{"status":"healthy"}`.
+
+### Connect the extension
+
+1. Deploy the API and PostgreSQL and apply the migration above.
 2. Publish the extension once, obtain its certificate key from the Azure DevOps extension management portal, and store it in the API secret store as `EXTENSION_SECRET`.
 3. Set `AUTH_MODE=app-token`, `NODE_ENV=production`, and `CORS_ALLOWED_ORIGINS` to the exact extension content origin.
 4. Replace `replace-with-your-publisher-id` in `src/extension/vss-extension.json`.

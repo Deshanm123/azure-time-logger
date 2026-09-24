@@ -5,5 +5,8 @@ coverage/
 *.tsbuildinfo
 .env
 .env.*.local
+.vercel/
 .DS_Store
 src/api/prisma/*.db
+.vercel
+.env*

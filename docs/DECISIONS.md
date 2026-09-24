@@ -281,3 +281,36 @@ The extension sends its signed app token as a bearer token. The API validates th
 - The extension certificate key must be rotated in the API when scope changes rotate the extension certificate.
 - The published extension and token claims must be verified in the Vita-Rapidus test organization before production rollout.
 - The current manifest needs no Azure DevOps REST scopes.
+
+---
+
+## ADR-014 — Deploy the MVP API on Vercel Functions
+
+**Status:** Accepted for MVP pilot
+
+### Context
+
+The MVP needs a small managed deployment for its existing Fastify API. Vercel
+supports Fastify as a single Node.js function and supports npm workspaces. Prisma
+on a serverless platform also requires deliberate connection pooling and migration
+handling.
+
+### Decision
+
+Deploy `src/api` as a Vercel project using the native Fastify preset. Include the
+shared contracts workspace during builds, generate Prisma Client during the Vercel
+build, and connect runtime traffic through a pooled PostgreSQL URL. Apply Prisma
+migrations separately with `prisma migrate deploy`; do not run them in every
+preview deployment.
+
+### Consequences
+
+- The existing Fastify entry point and local development workflow remain intact.
+- The API scales as a single Vercel Function and must stay within Vercel Function
+  runtime limits.
+- Warm function instances reuse one Prisma client, while database-side pooling
+  protects PostgreSQL from concurrent serverless instances.
+- Deployment secrets and environment-specific URLs are managed in Vercel, not
+  committed to the repository.
+- Database schema rollout is an explicit release step before code that depends on
+  a new migration is promoted.
