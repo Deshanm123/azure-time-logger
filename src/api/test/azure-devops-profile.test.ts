@@ -22,6 +22,7 @@ describe('resolveAzureDevOpsUser', () => {
       'https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1',
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: 'Bearer azure-devops-token' }),
+        redirect: 'manual',
       }),
     );
   });
@@ -30,6 +31,20 @@ describe('resolveAzureDevOpsUser', () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 401 }));
 
     await expect(resolveAzureDevOpsUser('invalid-token', fetcher)).rejects.toMatchObject({
+      statusCode: 401,
+      code: 'AUTHENTICATION_REQUIRED',
+    });
+  });
+
+  it('does not follow an authentication redirect to an HTML sign-in page', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { Location: 'https://example.test/sign-in' },
+      }),
+    );
+
+    await expect(resolveAzureDevOpsUser('expired-token', fetcher)).rejects.toMatchObject({
       statusCode: 401,
       code: 'AUTHENTICATION_REQUIRED',
     });

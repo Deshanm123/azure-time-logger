@@ -20,6 +20,7 @@ export async function resolveAzureDevOpsUser(
         Accept: 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
+      redirect: 'manual',
       signal: AbortSignal.timeout(10_000),
     });
   } catch {
